@@ -11,9 +11,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.corecoders.gymbuddy.screens.DashboardScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,10 +25,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             GymBuddyTheme {
                 val navController = rememberNavController()
+                val auth = Firebase.auth
+
+                val startDestination = if (auth.currentUser != null) "dashboard" else "login"
 
                 NavHost(
                     navController = navController,
-                    startDestination = "login" // Numele rutei de pornire
+                    startDestination = startDestination // Numele rutei de pornire
                 ) {
                     // Definim ruta pentru Login
                     composable("login") {
@@ -36,9 +42,12 @@ class MainActivity : ComponentActivity() {
                     composable("register") {
                         RegisterScreen(navController = navController)
                     }
+                    composable("dashboard") {
+                        DashboardScreen(navController = navController)
+                    }
                 }
             }
-            }
+        }
     }
 }
 
