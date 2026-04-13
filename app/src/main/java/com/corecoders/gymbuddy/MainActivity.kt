@@ -8,13 +8,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.corecoders.gymbuddy.data.AppDatabase
 import com.corecoders.gymbuddy.screens.DashboardScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
+import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
+import com.corecoders.gymbuddy.viewmodel.WorkoutViewModelFactory
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -26,6 +30,12 @@ class MainActivity : ComponentActivity() {
             GymBuddyTheme {
                 val navController = rememberNavController()
                 val auth = Firebase.auth
+
+                val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
+                val workoutViewModel: WorkoutViewModel = viewModel(
+                    factory = WorkoutViewModelFactory(database.workoutDao())
+                )
+
 
                 val startDestination = if (auth.currentUser != null) "dashboard" else "login"
 
@@ -43,7 +53,7 @@ class MainActivity : ComponentActivity() {
                         RegisterScreen(navController = navController)
                     }
                     composable("dashboard") {
-                        DashboardScreen(navController = navController)
+                        DashboardScreen(navController, workoutViewModel)
                     }
                 }
             }
