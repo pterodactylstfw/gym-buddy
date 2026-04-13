@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 data class WorkoutSet (
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val workoutId: Int,
-    val exerciseId: Int,
+    val exerciseId: String,
     val setNumber: Int,
     val weight: Double,
     val reps: Int,

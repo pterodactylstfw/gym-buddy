@@ -3,32 +3,57 @@ package com.corecoders.gymbuddy.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(navController: NavController, viewModel: WorkoutViewModel) {
+fun DashboardScreen(navController: NavController, viewModel: WorkoutViewModel, onStartWorkout: () -> Unit) {
+    val auth = Firebase.auth
     val workouts by viewModel.allWorkouts.collectAsState(initial = emptyList())
+
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(title = { Text("My Workouts") })
+            LargeTopAppBar(
+                title = { Text("My Workouts") },
+                actions = {
+                    TextButton(onClick = {
+                        auth.signOut()
+                        navController.navigate("login") {
+                            popUpTo("dashboard") { inclusive = true }
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out")
+                        Spacer(Modifier.width(4.dp))
+                        Text("Log Out")
+                    }
+                }
+            )
         },
+//        bottomBar = {
+//            Button(onClick = {
+//            auth.signOut()
+//            navController.navigate("login")
+//        }) { Text("Sign Out", style = MaterialTheme.typography.headlineMedium)}},
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                viewModel.startNewWorkout("Workout #${workouts.size + 1}")
-            }) {
-                Text("+", style = MaterialTheme.typography.headlineMedium)
+            FloatingActionButton(onClick = onStartWorkout) { // Navighează la active_workout
+                Icon(Icons.Default.Add, contentDescription = null)
             }
         }
     ) { padding ->
@@ -58,5 +83,6 @@ fun DashboardScreen(navController: NavController, viewModel: WorkoutViewModel) {
                 }
             }
         }
+
     }
 }

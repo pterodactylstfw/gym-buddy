@@ -13,10 +13,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.corecoders.gymbuddy.data.AppDatabase
+import com.corecoders.gymbuddy.data.dto.DatabaseInitializer
+import com.corecoders.gymbuddy.screens.ActiveWorkoutScreen
 import com.corecoders.gymbuddy.screens.DashboardScreen
+import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
+import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
+import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModelFactory
+import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
+import com.corecoders.gymbuddy.viewmodel.ExerciseViewModelFactory
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModelFactory
 import com.google.firebase.Firebase
@@ -32,8 +39,19 @@ class MainActivity : ComponentActivity() {
                 val auth = Firebase.auth
 
                 val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
+
+                DatabaseInitializer.populateDatabase(applicationContext, database.exerciseDao())
+
                 val workoutViewModel: WorkoutViewModel = viewModel(
                     factory = WorkoutViewModelFactory(database.workoutDao())
+                )
+
+                val exerciseViewModel: ExerciseViewModel = viewModel(
+                    factory = ExerciseViewModelFactory(database.exerciseDao())
+                )
+
+                val activeWorkoutViewModel: ActiveWorkoutViewModel = viewModel(
+                    factory = ActiveWorkoutViewModelFactory(database.workoutDao())
                 )
 
 
@@ -52,8 +70,37 @@ class MainActivity : ComponentActivity() {
                     composable("register") {
                         RegisterScreen(navController = navController)
                     }
+
                     composable("dashboard") {
-                        DashboardScreen(navController, workoutViewModel)
+                        DashboardScreen(
+                            navController = navController,
+                            viewModel = workoutViewModel,
+                            onStartWorkout = { navController.navigate("active_workout") }
+                        )
+                    }
+
+                    // 2. Antrenamentul în desfășurare
+                    composable("active_workout") {
+                        ActiveWorkoutScreen(
+                            viewModel = activeWorkoutViewModel,
+                            onAddExerciseClick = { navController.navigate("catalog") },
+                            onFinishClick = {
+                                navController.navigate("dashboard") {
+                                    popUpTo("dashboard") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // 3. Catalogul de exerciții (modul de selecție)
+                    composable("catalog") {
+                        ExerciseCatalogScreen(
+                            viewModel = exerciseViewModel,
+                            onExerciseSelected = { exercise ->
+                                activeWorkoutViewModel.addExercise(exercise)
+                                navController.popBackStack() // Ne întoarcem la antrenament
+                            }
+                        )
                     }
                 }
             }
