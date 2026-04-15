@@ -86,7 +86,25 @@ fun LoginScreen(navController: NavController) {
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // 1. Logica pentru Email/Parolă
+    LaunchedEffect(Unit) {
+        val pendingResultTask = auth.pendingAuthResult
+        if (pendingResultTask != null) {
+            isLoading = true
+            pendingResultTask
+                .addOnSuccessListener {
+                    isLoading = false
+                    Toast.makeText(context, "GitHub Login Success!", Toast.LENGTH_SHORT).show()
+                    navController.navigate("dashboard") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+                .addOnFailureListener { e ->
+                    isLoading = false
+                    Toast.makeText(context, "Eroare: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+        }
+    }
+
     val onLogin = {
         if (email.isNotEmpty() && password.isNotEmpty() && !isLoading) {
             isLoading = true
@@ -105,21 +123,16 @@ fun LoginScreen(navController: NavController) {
         }
     }
 
-    // 2. NOU: Logica pentru GitHub
     val onGitHubLogin: () -> Unit = {
         if (activity != null && !isLoading) {
             isLoading = true
-            // Creăm furnizorul de autentificare pentru GitHub
             val provider = OAuthProvider.newBuilder("github.com")
 
-            // Cerem acces la adresa de email a utilizatorului
             provider.scopes = listOf("user:email")
 
-            // Lansăm fereastra de logare
             auth.startActivityForSignInWithProvider(activity, provider.build())
                 .addOnSuccessListener { authResult ->
                     isLoading = false
-                    // Opțional: Poți lua numele userului cu authResult.user?.displayName
                     Toast.makeText(context, "GitHub Login Success!", Toast.LENGTH_SHORT).show()
                     navController.navigate("dashboard") {
                         popUpTo("login") { inclusive = true }
@@ -137,7 +150,6 @@ fun LoginScreen(navController: NavController) {
     val onGoogleLogin = {
         scope.launch {
             try {
-                // 1. Configurăm cererea pentru Google
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
                     .setServerClientId(webClientId)
@@ -147,7 +159,6 @@ fun LoginScreen(navController: NavController) {
                     .addCredentialOption(googleIdOption)
                     .build()
 
-                // 2. Afișăm fereastra de selecție a contului
                 val result = credentialManager.getCredential(context, request)
                 val credential = result.credential
 
@@ -155,7 +166,6 @@ fun LoginScreen(navController: NavController) {
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                     val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
 
-                    // 3. Autentificăm în Firebase
                     auth.signInWithCredential(firebaseCredential).await()
 
                     Toast.makeText(context, "Google Login Success!", Toast.LENGTH_SHORT).show()
@@ -223,7 +233,6 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Linia despărțitoare "OR"
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -235,16 +244,15 @@ fun LoginScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // NOU: Butonul de GitHub
         SocialLoginButton(
             text = "Continue with GitHub",
-            iconResId = R.drawable.ic_github, // Vezi Pasul 2 mai jos
+            iconResId = R.drawable.ic_github,
             onClick = onGitHubLogin
         )
         Spacer(modifier = Modifier.height(12.dp))
         SocialLoginButton(
             text = "Continue with Google",
-            iconResId = R.drawable.ic_google, // Asigură-te că ai și acest logo în drawable!
+            iconResId = R.drawable.ic_google,
             onClick = { onGoogleLogin() }
         )
 

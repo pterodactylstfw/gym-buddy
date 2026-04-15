@@ -15,23 +15,13 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.GymBuddy">
+            android:theme="@style/Theme.GymBuddy"
+            android:launchMode="singleTask">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter android:label="filter_auth">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:scheme="https"
-                    android:host="gym-buddy-9a63d.firebaseapp.com"
-                    android:pathPrefix="/__/auth/handler" />
-
-                <data android:scheme="gymbuddy" android:host="github-login" />
             </intent-filter>
         </activity>
     </application>
