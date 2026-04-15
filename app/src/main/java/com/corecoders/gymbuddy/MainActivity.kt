@@ -13,7 +13,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.corecoders.gymbuddy.data.AppDatabase
-import com.corecoders.gymbuddy.data.dto.DatabaseInitializer
 import com.corecoders.gymbuddy.screens.ActiveWorkoutScreen
 import com.corecoders.gymbuddy.screens.DashboardScreen
 import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
@@ -23,7 +22,6 @@ import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModelFactory
 import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
-import com.corecoders.gymbuddy.viewmodel.ExerciseViewModelFactory
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModelFactory
 import com.google.firebase.Firebase
@@ -40,15 +38,14 @@ class MainActivity : ComponentActivity() {
 
                 val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
 
-                DatabaseInitializer.populateDatabase(applicationContext, database.exerciseDao())
+                //DatabaseInitializer.populateDatabase(applicationContext, database.exerciseDao())
 
                 val workoutViewModel: WorkoutViewModel = viewModel(
                     factory = WorkoutViewModelFactory(database.workoutDao())
                 )
 
-                val exerciseViewModel: ExerciseViewModel = viewModel(
-                    factory = ExerciseViewModelFactory(database.exerciseDao())
-                )
+                // Șterge liniile vechi cu ExerciseViewModelFactory
+                val exerciseViewModel: ExerciseViewModel = viewModel() // Pur și simplu așa!
 
                 val activeWorkoutViewModel: ActiveWorkoutViewModel = viewModel(
                     factory = ActiveWorkoutViewModelFactory(database.workoutDao())

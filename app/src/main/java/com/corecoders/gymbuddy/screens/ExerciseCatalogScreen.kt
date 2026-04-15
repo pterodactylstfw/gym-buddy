@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape // NOU: Shape rotunjit
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -30,120 +32,90 @@ import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
 @Composable
 fun ExerciseCatalogScreen(viewModel: ExerciseViewModel, onExerciseSelected: (Exercise) -> Unit) {
     val context = LocalContext.current
-
     val imageLoader = remember {
         ImageLoader.Builder(context)
             .components {
-                if (Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
-                }
-            }
-            .build()
+                if (Build.VERSION.SDK_INT >= 28) add(ImageDecoderDecoder.Factory())
+                else add(GifDecoder.Factory())
+            }.build()
     }
 
     val searchQuery by viewModel.searchQuery.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
 
     Scaffold(
-        // Modificăm TopAppBar să fie mai minimalist
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Exercises", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFFF7F7F7) // Fundal gri foarte deschis
-                )
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFFF7F7F7))
             )
         },
-        containerColor = Color(0xFFF7F7F7) // Fundal general al ecranului
+        containerColor = Color(0xFFF7F7F7)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Bara de Căutare redesenată
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
                 placeholder = { Text("Search exercises...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true,
-                // Shape rotunjit pentru bară
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color.LightGray,
-                    unfocusedBorderColor = Color.LightGray
+                    unfocusedContainerColor = Color.White
                 )
             )
 
-            // Lista de Exerciții
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp) // Spațiere mai mare
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(exercises) { exercise ->
-                    // Card redesenat
+                // REPARARE: Folosim itemsIndexed pentru a detecta finalul listei
+                itemsIndexed(exercises) { index, exercise ->
+
+                    // Detectăm scroll-ul la final
+                    if (index >= exercises.size - 1 && !viewModel.isEndReached && !viewModel.isNextPageLoading) {
+                        LaunchedEffect(Unit) {
+                            viewModel.fetchNextPage()
+                        }
+                    }
+
+                    // Card-ul tău (înlocuiește ExerciseCard care lipsea)
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable{onExerciseSelected(exercise)},
-                        // Colțuri FOARTE rotunjite
+                        modifier = Modifier.fillMaxWidth().clickable { onExerciseSelected(exercise) },
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color.White // Card alb curat
-                        ),
-                        // Elevație mai mică, pentru un look flat
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp), // Spațiere interioară mai mare
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Imagine rotunjită și curată
+                        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(
                                 model = exercise.gifUrl,
                                 contentDescription = exercise.name,
                                 imageLoader = imageLoader,
-                                modifier = Modifier
-                                    .size(64.dp) // Puțin mai mică imaginea
-                                    .clip(RoundedCornerShape(8.dp)) // Rotunjim și imaginea
-                                    .background(Color(0xFFEEEEEE)), // Fundal gri pentru imagine
+                                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFEEEEEE)),
                                 contentScale = ContentScale.Crop
                             )
-
-                            // Detaliile text ierarhizate
-                            Column(
-                                modifier = Modifier.padding(start = 16.dp)
-                            ) {
-                                Text(
-                                    text = exercise.name,
-                                    // Font gros, stil titlu
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold, // Foarte gros
-                                    color = Color.Black
-                                )
+                            Column(modifier = Modifier.padding(start = 16.dp)) {
+                                Text(text = exercise.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = exercise.targetMuscle,
-                                    // Font mai subțire, culoare secundară (albastru)
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFF007AFF) // Albastru specific iOS
-                                )
+                                Text(text = exercise.targetMuscle, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF007AFF))
                             }
+                        }
+                    }
+                }
+
+                // Arătăm rotița de încărcare doar când se încarcă pagina următoare
+                if (viewModel.isNextPageLoading) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
                         }
                     }
                 }
             }
         }
     }
-
 }
 
