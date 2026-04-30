@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,18 +32,11 @@ fun DashboardScreen(navController: NavController, viewModel: WorkoutViewModel, o
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(
-                title = { Text("My Workouts") },
+            CenterAlignedTopAppBar(
+                title = { Text("GymBuddy") },
                 actions = {
-                    TextButton(onClick = {
-                        auth.signOut()
-                        navController.navigate("login") {
-                            popUpTo("dashboard") { inclusive = true }
-                        }
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out")
-                        Spacer(Modifier.width(4.dp))
-                        Text("Log Out")
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        Icon(Icons.Default.Person, contentDescription = "Profil")
                     }
                 }
             )

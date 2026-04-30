@@ -17,12 +17,15 @@ import com.corecoders.gymbuddy.screens.ActiveWorkoutScreen
 import com.corecoders.gymbuddy.screens.DashboardScreen
 import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
+import com.corecoders.gymbuddy.screens.ProfileScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
 import com.corecoders.gymbuddy.screens.WorkoutDetailScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModelFactory
 import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
+import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
+import com.corecoders.gymbuddy.viewmodel.ProfileViewModelFactory
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModelFactory
 import com.google.firebase.Firebase
@@ -50,6 +53,10 @@ class MainActivity : ComponentActivity() {
 
                 val activeWorkoutViewModel: ActiveWorkoutViewModel = viewModel(
                     factory = ActiveWorkoutViewModelFactory(database.workoutDao())
+                )
+
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = ProfileViewModelFactory(database.workoutDao())
                 )
 
 
@@ -110,6 +117,19 @@ class MainActivity : ComponentActivity() {
                         val workoutId = backStackEntry.arguments?.getString("workoutId")?.toInt() ?: 0
                         // Aici vom apela un ecran de detalii (vezi Pasul B)
                         WorkoutDetailScreen(workoutId = workoutId, database = database, onBack = { navController.popBackStack() })
+                    }
+
+                    composable("profile") {
+                        ProfileScreen(
+                            viewModel = profileViewModel,
+                            onBack = { navController.popBackStack() },
+                            onSignOutSuccess = {
+                                navController.navigate("login") {
+                                    // Curățăm întregul istoric de ecrane la deconectare!
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
                     }
                 }
             }
