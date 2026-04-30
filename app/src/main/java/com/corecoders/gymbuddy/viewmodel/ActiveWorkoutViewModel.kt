@@ -94,6 +94,9 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
             onFinished() // Îi spunem ecranului că am terminat de salvat, ca să închidă pagina
         }
     }
+    fun resetWorkout() {
+        _activeExercises.value = emptyList()
+    }
 }
 
 // Fabrica standard (la fel ca la celelalte)

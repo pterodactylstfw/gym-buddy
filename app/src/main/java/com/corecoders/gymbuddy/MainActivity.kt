@@ -18,6 +18,7 @@ import com.corecoders.gymbuddy.screens.DashboardScreen
 import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
+import com.corecoders.gymbuddy.screens.WorkoutDetailScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModelFactory
@@ -72,7 +73,10 @@ class MainActivity : ComponentActivity() {
                         DashboardScreen(
                             navController = navController,
                             viewModel = workoutViewModel,
-                            onStartWorkout = { navController.navigate("active_workout") }
+                            onStartWorkout = {
+                                activeWorkoutViewModel.resetWorkout() // RESETĂM aici pentru un antrenament curat
+                                navController.navigate("active_workout")
+                            }
                         )
                     }
 
@@ -82,6 +86,7 @@ class MainActivity : ComponentActivity() {
                             viewModel = activeWorkoutViewModel,
                             onAddExerciseClick = { navController.navigate("catalog") },
                             onFinishClick = {
+                                activeWorkoutViewModel.resetWorkout() // RESETĂM și la final
                                 navController.navigate("dashboard") {
                                     popUpTo("dashboard") { inclusive = true }
                                 }
@@ -98,6 +103,13 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack() // Ne întoarcem la antrenament
                             }
                         )
+                    }
+
+                    // MainActivity.kt - în NavHost
+                    composable("workout_details/{workoutId}") { backStackEntry ->
+                        val workoutId = backStackEntry.arguments?.getString("workoutId")?.toInt() ?: 0
+                        // Aici vom apela un ecran de detalii (vezi Pasul B)
+                        WorkoutDetailScreen(workoutId = workoutId, database = database, onBack = { navController.popBackStack() })
                     }
                 }
             }

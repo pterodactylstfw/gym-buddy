@@ -2,6 +2,10 @@
 .gradle/
 build/
 
+# Postman files
+postman/
+/.postman
+
 # Local configuration file (sdk path, etc)
 local.properties
 
