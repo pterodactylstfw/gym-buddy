@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.corecoders.gymbuddy.data.dao.ExerciseDao
 import com.corecoders.gymbuddy.data.dao.WorkoutDao
 
-@Database(entities = [Workout::class, WorkoutSet::class, Exercise::class], version = 1, exportSchema = false)
+@Database(entities = [Workout::class, WorkoutSet::class, Exercise::class], version = 2, exportSchema = false)
 abstract class AppDatabase: RoomDatabase() {
 
     abstract fun workoutDao() : WorkoutDao
@@ -28,5 +28,6 @@ abstract class AppDatabase: RoomDatabase() {
                     .also { INSTANCE = it }
             }
         }
+
     }
 }

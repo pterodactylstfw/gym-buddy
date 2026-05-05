@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class Exercise(
     @PrimaryKey val id: String,
     val name: String,
+    val bodyPart: String,
     val targetMuscle: String,
     val gifUrl: String
 )

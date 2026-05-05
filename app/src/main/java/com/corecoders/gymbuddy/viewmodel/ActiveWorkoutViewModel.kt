@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-// 1. Definim cum arată un set pe ecran (folosim String pentru că utilizatorul tastează text)
 data class ActiveSet(
     val id: String = UUID.randomUUID().toString(),
     val weight: String = "",
@@ -20,37 +19,47 @@ data class ActiveSet(
     val isCompleted: Boolean = false
 )
 
-// 2. Definim un exercițiu care are o listă de seturi
 data class ActiveExercise(
     val exercise: Exercise,
-    val sets: List<ActiveSet> = listOf(ActiveSet()) // Începe automat cu un set gol
+    val sets: List<ActiveSet> = listOf(ActiveSet())
 )
 
 class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
-    // Lista cu exercițiile pe care le face acum la sală
+    // Numele antrenamentului, editabil de către utilizator
+    private val _workoutName = MutableStateFlow("Evening Workout")
+    val workoutName = _workoutName.asStateFlow()
+
     private val _activeExercises = MutableStateFlow<List<ActiveExercise>>(emptyList())
     val activeExercises = _activeExercises.asStateFlow()
 
-    // --- FUNCȚII PENTRU UI ---
+    fun updateWorkoutName(newName: String) {
+        _workoutName.value = newName
+    }
 
-    // Adaugă un exercițiu nou în antrenament (ex: selectat din Catalog)
     fun addExercise(exercise: Exercise) {
         val currentList = _activeExercises.value.toMutableList()
         currentList.add(ActiveExercise(exercise = exercise))
         _activeExercises.value = currentList
     }
 
-    // Adaugă un set nou (rând nou) la un exercițiu
     fun addSetToExercise(exerciseIndex: Int) {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
-        val newSets = currentExercise.sets.toMutableList().apply { add(ActiveSet()) }
+
+        // Magie UX: Copiem greutatea și repetările de la ultimul set (dacă există)
+        val lastSet = currentExercise.sets.lastOrNull()
+        val newSet = if (lastSet != null) {
+            ActiveSet(weight = lastSet.weight, reps = lastSet.reps)
+        } else {
+            ActiveSet()
+        }
+
+        val newSets = currentExercise.sets.toMutableList().apply { add(newSet) }
         currentList[exerciseIndex] = currentExercise.copy(sets = newSets)
         _activeExercises.value = currentList
     }
 
-    // Actualizează ce scrie utilizatorul în căsuțe (kg, repetări) sau bifa
     fun updateSet(exerciseIndex: Int, setIndex: Int, weight: String? = null, reps: String? = null, isCompleted: Boolean? = null) {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
@@ -67,17 +76,20 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
-    // --- SALVAREA FINALĂ ÎN BAZA DE DATE (ROOM) ---
-    fun finishWorkout(workoutName: String, onFinished: () -> Unit) {
+    fun finishWorkout(onFinished: () -> Unit) {
+        // Prevenim salvarea antrenamentelor goale
+        if (_activeExercises.value.isEmpty()) {
+            onFinished()
+            return
+        }
+
         viewModelScope.launch {
-            // 1. Creăm antrenamentul general și îi luăm ID-ul
-            val newWorkout = Workout(name = workoutName)
+            val finalName = if (_workoutName.value.isBlank()) "Workout" else _workoutName.value
+            val newWorkout = Workout(name = finalName)
             val workoutId = workoutDao.insertWorkout(newWorkout).toInt()
 
-            // 2. Trecem prin toate exercițiile și seturile de pe ecran
             _activeExercises.value.forEach { activeExercise ->
                 activeExercise.sets.forEachIndexed { index, activeSet ->
-                    // Salvăm doar seturile care au fost completate/bifate
                     if (activeSet.isCompleted && activeSet.weight.isNotEmpty() && activeSet.reps.isNotEmpty()) {
                         val setInfo = WorkoutSet(
                             workoutId = workoutId,
@@ -91,15 +103,16 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                     }
                 }
             }
-            onFinished() // Îi spunem ecranului că am terminat de salvat, ca să închidă pagina
+            onFinished()
         }
     }
+
     fun resetWorkout() {
         _activeExercises.value = emptyList()
+        _workoutName.value = "Evening Workout" // Resetăm și numele
     }
 }
 
-// Fabrica standard (la fel ca la celelalte)
 class ActiveWorkoutViewModelFactory(private val workoutDao: WorkoutDao) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ActiveWorkoutViewModel::class.java)) {

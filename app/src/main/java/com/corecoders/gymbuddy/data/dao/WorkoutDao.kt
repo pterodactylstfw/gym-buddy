@@ -22,4 +22,11 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_sets WHERE workoutId = :workoutId")
     fun getSetsforWorkout(workoutId: Int): Flow<List<WorkoutSet>>
 
+    // În WorkoutDao.kt
+    @Query("SELECT COUNT(*) FROM workouts")
+    fun getWorkoutsCount(): Flow<Int>
+
+    @Query("SELECT SUM(weight * reps) FROM workout_sets WHERE isCompleted = 1")
+    fun getTotalVolume(): Flow<Double?>
+
 }
