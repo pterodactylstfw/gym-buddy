@@ -6,29 +6,39 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
+// Space Grotesk Placeholder (Fallback to Default until assets added)
+val SpaceGrotesk = FontFamily.Default 
+
 val Typography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Black,
+        fontSize = 48.sp,
+        letterSpacing = (-1).sp
+    ),
+    titleLarge = TextStyle(
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Black,
+        fontSize = 28.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    titleMedium = TextStyle(
+        fontFamily = SpaceGrotesk,
+        fontWeight = FontWeight.Bold,
+        fontSize = 20.sp,
+        letterSpacing = 0.5.sp
+    ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
-    )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         fontSize = 11.sp,
-        lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
-    */
 )

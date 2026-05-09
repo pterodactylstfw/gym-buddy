@@ -28,7 +28,14 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    // Aici le vei putea defini mai târziu dacă vrei un Dark Mode cu negru absolut și roșu
+    primary = SurgicalRed,
+    onPrimary = Color.White,
+    background = OLEDBlack,
+    onBackground = Color.White,
+    surface = SlateSurface,
+    onSurface = Color.White,
+    secondary = GymTextLight,
+    outlineVariant = SurgicalDivider
 )
 
 @Composable

@@ -16,6 +16,7 @@ data class ActiveSet(
     val id: String = UUID.randomUUID().toString(),
     val weight: String = "",
     val reps: String = "",
+    val setType: String = "N",
     val isCompleted: Boolean = false
 )
 
@@ -47,10 +48,10 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
 
-        // Magie UX: Copiem greutatea și repetările de la ultimul set (dacă există)
+        // Magie UX: Copiem greutatea, repetările și TIPUL de la ultimul set (dacă există)
         val lastSet = currentExercise.sets.lastOrNull()
         val newSet = if (lastSet != null) {
-            ActiveSet(weight = lastSet.weight, reps = lastSet.reps)
+            ActiveSet(weight = lastSet.weight, reps = lastSet.reps, setType = lastSet.setType)
         } else {
             ActiveSet()
         }
@@ -60,7 +61,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
-    fun updateSet(exerciseIndex: Int, setIndex: Int, weight: String? = null, reps: String? = null, isCompleted: Boolean? = null) {
+    fun updateSet(exerciseIndex: Int, setIndex: Int, weight: String? = null, reps: String? = null, setType: String? = null, isCompleted: Boolean? = null) {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
         val currentSets = currentExercise.sets.toMutableList()
@@ -69,6 +70,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         currentSets[setIndex] = oldSet.copy(
             weight = weight ?: oldSet.weight,
             reps = reps ?: oldSet.reps,
+            setType = setType ?: oldSet.setType,
             isCompleted = isCompleted ?: oldSet.isCompleted
         )
 
@@ -77,8 +79,10 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 
     fun finishWorkout(onFinished: () -> Unit) {
-        // Prevenim salvarea antrenamentelor goale
-        if (_activeExercises.value.isEmpty()) {
+        val completedSets = _activeExercises.value.flatMap { it.sets }.filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
+        
+        // Prevenim salvarea antrenamentelor fără niciun set completat
+        if (completedSets.isEmpty()) {
             onFinished()
             return
         }
@@ -97,6 +101,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                             setNumber = index + 1,
                             weight = activeSet.weight.toDoubleOrNull() ?: 0.0,
                             reps = activeSet.reps.toIntOrNull() ?: 0,
+                            setType = activeSet.setType,
                             isCompleted = true
                         )
                         workoutDao.insertSet(setInfo)

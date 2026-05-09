@@ -28,6 +28,7 @@ import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
 import com.corecoders.gymbuddy.screens.LoginScreen
 import com.corecoders.gymbuddy.screens.ProfileScreen
 import com.corecoders.gymbuddy.screens.RegisterScreen
+import com.corecoders.gymbuddy.screens.SettingsScreen
 import com.corecoders.gymbuddy.screens.StatsScreen
 import com.corecoders.gymbuddy.screens.WorkoutDetailScreen
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
@@ -129,8 +130,9 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable(BottomNavItem.Profile.route) {
+                        composable("profile") {
                             ProfileScreen(
+                                navController = navController,
                                 viewModel = profileViewModel,
                                 onBack = { navController.popBackStack() },
                                 onSignOutSuccess = {
@@ -163,8 +165,12 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("workout_details/{workoutId}") { backStackEntry ->
-                            val workoutId = backStackEntry.arguments?.getString("workoutId")?.toInt() ?: 0
+                            val workoutId = backStackEntry.arguments?.getString("workoutId")?.toIntOrNull() ?: 0
                             WorkoutDetailScreen(workoutId = workoutId, database = database, onBack = { navController.popBackStack() })
+                        }
+
+                        composable("settings") {
+                            SettingsScreen(navController = navController)
                         }
                     }
                 }

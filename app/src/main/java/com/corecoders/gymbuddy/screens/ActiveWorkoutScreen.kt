@@ -1,22 +1,36 @@
 package com.corecoders.gymbuddy.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.corecoders.gymbuddy.ui.theme.OLEDBlack
+import com.corecoders.gymbuddy.ui.theme.SurgicalRed
+import com.corecoders.gymbuddy.ui.theme.SlateSurface
+import com.corecoders.gymbuddy.ui.theme.SurgicalDivider
+import com.corecoders.gymbuddy.ui.theme.PRGold
+import com.corecoders.gymbuddy.ui.theme.SuccessGreen
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,34 +46,41 @@ fun ActiveWorkoutScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Active Workout", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "ACTIVE SESSION", 
+                        style = MaterialTheme.typography.labelSmall,
+                        letterSpacing = 1.sp,
+                        color = SurgicalRed
+                    ) 
+                },
                 actions = {
                     TextButton(onClick = {
                         viewModel.finishWorkout { onFinishClick() }
                     }) {
-                        Text("Finish", fontWeight = FontWeight.Bold, color = Color(0xFF007AFF))
+                        Text("FINISH", style = MaterialTheme.typography.titleMedium, color = SurgicalRed)
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = OLEDBlack)
             )
         },
-        containerColor = Color(0xFFF2F2F7) // Gri specific iOS pentru background
+        containerColor = OLEDBlack
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
-            // Input pentru numele antrenamentului
-            TextField(
+            // Input pentru numele antrenamentului (Minimalist)
+            BasicTextField(
                 value = workoutName,
                 onValueChange = { viewModel.updateWorkoutName(it) },
-                textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.ExtraBold),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Workout Name", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold) }
+                textStyle = MaterialTheme.typography.titleLarge.copy(color = Color.White),
+                cursorBrush = SolidColor(SurgicalRed),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+                decorationBox = { innerTextField ->
+                    if (workoutName.isEmpty()) {
+                        Text("Workout Name", color = Color.Gray, style = MaterialTheme.typography.titleLarge)
+                    }
+                    innerTextField()
+                }
             )
 
             LazyColumn(
@@ -68,107 +89,216 @@ fun ActiveWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 itemsIndexed(activeExercises) { exerciseIndex, activeExercise ->
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            // Titlul Exercițiului
-                            Text(
-                                text = activeExercise.exercise.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF007AFF)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+                    ExerciseCard(
+                        exerciseIndex = exerciseIndex,
+                        activeExercise = activeExercise,
+                        viewModel = viewModel
+                    )
+                }
+            }
 
-                            // Header pentru coloane
-                            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp)) {
-                                Text("SET", modifier = Modifier.width(40.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("KG", modifier = Modifier.width(70.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("REPS", modifier = Modifier.width(70.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.width(48.dp)) // Spațiu pentru checkbox
-                            }
+            // Butonul gigant de jos (Modern Red)
+            Button(
+                onClick = onAddExerciseClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .height(60.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SurgicalRed)
+            ) {
+                Text("ADD EXERCISE", style = MaterialTheme.typography.labelSmall, color = Color.White)
+            }
+        }
+    }
+}
 
-                            // Rândurile pentru Seturi
-                            activeExercise.sets.forEachIndexed { setIndex, activeSet ->
-                                // Dacă e completat, facem fundalul verde deschis
-                                val rowBackgroundColor = if (activeSet.isCompleted) Color(0xFFE8F5E9) else Color.Transparent
+@Composable
+fun ExerciseCard(
+    exerciseIndex: Int,
+    activeExercise: com.corecoders.gymbuddy.viewmodel.ActiveExercise,
+    viewModel: ActiveWorkoutViewModel
+) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = SlateSurface),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, SurgicalDivider)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Header Exercițiu
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = activeExercise.exercise.name.uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(rowBackgroundColor, RoundedCornerShape(8.dp))
-                                        .padding(vertical = 4.dp, horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // Numărul setului
-                                    Text("${setIndex + 1}", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+            // Labels pentru coloane
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                Text("SET", modifier = Modifier.width(36.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("TYPE", modifier = Modifier.width(44.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.weight(1f))
+                Text("KG", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("REPS", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.width(40.dp))
+            }
 
-                                    Spacer(modifier = Modifier.weight(1f))
+            // Rândurile pentru Seturi
+            activeExercise.sets.forEachIndexed { setIndex, activeSet ->
+                val isCompleted = activeSet.isCompleted
+                
+                // Set Type Color
+                val typeColor = when(activeSet.setType) {
+                    "W" -> PRGold
+                    "D" -> SuccessGreen
+                    "F" -> SurgicalRed
+                    else -> if (isCompleted) SurgicalRed else Color.Gray
+                }
+                
+                // Hairline Divider
+                HorizontalDivider(thickness = 0.5.dp, color = SurgicalDivider)
 
-                                    // Input KG
-                                    OutlinedTextField(
-                                        value = activeSet.weight,
-                                        onValueChange = { viewModel.updateSet(exerciseIndex, setIndex, weight = it) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.width(70.dp).height(50.dp),
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(8.dp),
-                                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
-                                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
+                        .alpha(if (isCompleted) 1f else 0.5f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Index
+                    Text(
+                        "${setIndex + 1}", 
+                        fontWeight = FontWeight.Bold, 
+                        modifier = Modifier.width(36.dp),
+                        color = if (isCompleted) SurgicalRed else Color.White
+                    )
 
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    // Input Reps
-                                    OutlinedTextField(
-                                        value = activeSet.reps,
-                                        onValueChange = { viewModel.updateSet(exerciseIndex, setIndex, reps = it) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.width(70.dp).height(50.dp),
-                                        singleLine = true,
-                                        shape = RoundedCornerShape(8.dp),
-                                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
-                                    )
-
-                                    // Checkbox completare (Design customizat)
-                                    Checkbox(
-                                        checked = activeSet.isCompleted,
-                                        onCheckedChange = { viewModel.updateSet(exerciseIndex, setIndex, isCompleted = it) },
-                                        colors = CheckboxDefaults.colors(
-                                            checkedColor = Color(0xFF4CAF50), // Verde
-                                            uncheckedColor = Color.LightGray
-                                        )
-                                    )
+                    // Type Toggle (N, W, D, F)
+                    Box(
+                        modifier = Modifier
+                            .width(44.dp)
+                            .clickable {
+                                val nextType = when (activeSet.setType) {
+                                    "N" -> "W"
+                                    "W" -> "D"
+                                    "D" -> "F"
+                                    else -> "N"
                                 }
+                                viewModel.updateSet(exerciseIndex, setIndex, setType = nextType)
                             }
+                            .background(
+                                typeColor.copy(alpha = 0.1f),
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            activeSet.setType,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp,
+                            color = typeColor
+                        )
+                    }
 
-                            // Buton de adăugat set nou
-                            TextButton(
-                                onClick = { viewModel.addSetToExercise(exerciseIndex) },
-                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp)
-                            ) {
-                                Text("+ Add Set", color = Color(0xFF007AFF), fontWeight = FontWeight.Bold)
-                            }
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Input KG
+                    SetInputField(
+                        value = activeSet.weight,
+                        onValueChange = { newValue ->
+                            val filtered = newValue.filter { it.isDigit() || it == '.' }
+                            viewModel.updateSet(exerciseIndex, setIndex, weight = filtered)
+                        },
+                        isCompleted = isCompleted
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Input Reps
+                    SetInputField(
+                        value = activeSet.reps,
+                        onValueChange = { newValue ->
+                            val filtered = newValue.filter { it.isDigit() }
+                            viewModel.updateSet(exerciseIndex, setIndex, reps = filtered)
+                        },
+                        isCompleted = isCompleted
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Status Check (Custom Red Circle)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(
+                                if (isCompleted) SurgicalRed else Color.Transparent,
+                                CircleShape
+                            )
+                            .border(
+                                1.5.dp,
+                                if (isCompleted) SurgicalRed else SurgicalDivider,
+                                CircleShape
+                            )
+                            .clickable {
+                                viewModel.updateSet(exerciseIndex, setIndex, isCompleted = !isCompleted)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Done",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
             }
 
-            // Butonul gigant de jos pentru a adăuga exerciții
-            Button(
-                onClick = onAddExerciseClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007AFF))
+            // Buton de adăugat set nou (Minimalist)
+            TextButton(
+                onClick = { viewModel.addSetToExercise(exerciseIndex) },
+                modifier = Modifier.align(Alignment.Start).padding(top = 8.dp)
             ) {
-                Text("+ Add Exercise", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("+ ADD SET", color = SurgicalRed, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 0.5.sp)
             }
         }
     }
+}
+
+@Composable
+fun SetInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    isCompleted: Boolean
+) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier
+            .width(60.dp)
+            .height(36.dp)
+            .background(if (isCompleted) Color.Transparent else OLEDBlack.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .border(
+                0.5.dp, 
+                if (isCompleted) SurgicalRed.copy(alpha = 0.5f) else SurgicalDivider, 
+                RoundedCornerShape(8.dp)
+            )
+            .padding(top = 8.dp),
+        textStyle = TextStyle(
+            color = if (isCompleted) SurgicalRed else Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            textAlign = TextAlign.Center
+        ),
+        singleLine = true,
+        cursorBrush = SolidColor(SurgicalRed)
+    )
 }

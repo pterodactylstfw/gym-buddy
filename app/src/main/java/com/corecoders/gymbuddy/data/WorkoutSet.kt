@@ -11,5 +11,6 @@ data class WorkoutSet (
     val setNumber: Int,
     val weight: Double,
     val reps: Int,
+    val setType: String = "N", // N: Normal, W: Warm-up, D: Drop Set, F: Failure
     val isCompleted: Boolean = false
 )
