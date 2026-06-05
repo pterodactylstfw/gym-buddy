@@ -9,37 +9,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.corecoders.gymbuddy.data.AppDatabase
+import com.corecoders.gymbuddy.data.UserPreferences
 import com.corecoders.gymbuddy.navigation.BottomNavItem
 import com.corecoders.gymbuddy.navigation.BottomNavigationBar
-import com.corecoders.gymbuddy.screens.ActiveWorkoutScreen
-import com.corecoders.gymbuddy.screens.DashboardScreen
-import com.corecoders.gymbuddy.screens.ExerciseCatalogScreen
-import com.corecoders.gymbuddy.screens.LoginScreen
-import com.corecoders.gymbuddy.screens.ProfileScreen
-import com.corecoders.gymbuddy.screens.RegisterScreen
-import com.corecoders.gymbuddy.screens.SettingsScreen
-import com.corecoders.gymbuddy.screens.StatsScreen
-import com.corecoders.gymbuddy.screens.WorkoutDetailScreen
+import com.corecoders.gymbuddy.screens.*
 import com.corecoders.gymbuddy.ui.theme.GymBuddyTheme
-import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
-import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModelFactory
-import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
-import com.corecoders.gymbuddy.viewmodel.ExerciseViewModelFactory
-import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
-import com.corecoders.gymbuddy.viewmodel.ProfileViewModelFactory
-import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
-import com.corecoders.gymbuddy.viewmodel.WorkoutViewModelFactory
+import com.corecoders.gymbuddy.viewmodel.*
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -48,7 +32,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GymBuddyTheme {
+            val userPreferences = remember { UserPreferences(applicationContext) }
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModelFactory(userPreferences)
+            )
+            val darkMode by settingsViewModel.darkMode.collectAsState()
+
+            GymBuddyTheme(darkTheme = darkMode) {
                 val navController = rememberNavController()
                 val auth = Firebase.auth
                 val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
@@ -64,25 +54,28 @@ class MainActivity : ComponentActivity() {
                     factory = ActiveWorkoutViewModelFactory(database.workoutDao())
                 )
                 val profileViewModel: ProfileViewModel = viewModel(
-                    factory = ProfileViewModelFactory(database.workoutDao())
+                    factory = ProfileViewModelFactory(database.workoutDao(), database.routineDao())
+                )
+                val historyViewModel: HistoryViewModel = viewModel(
+                    factory = HistoryViewModelFactory(database.workoutDao())
+                )
+                val routinesViewModel: RoutinesViewModel = viewModel(
+                    factory = RoutinesViewModelFactory(database.routineDao(), database.exerciseDao())
                 )
 
                 val startDestination = if (auth.currentUser != null) BottomNavItem.Dashboard.route else "login"
 
-                // Aflăm ruta curentă pentru a ști dacă arătăm bara de jos[cite: 5]
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                // Rutele unde bara de navigare este vizibilă[cite: 5]
                 val showBottomBar = currentRoute in listOf(
                     BottomNavItem.Dashboard.route,
                     BottomNavItem.Catalog.route,
                     BottomNavItem.Profile.route,
                     BottomNavItem.Stats.route,
-                    BottomNavItem.Store.route
+                    BottomNavItem.Social.route
                 )
 
-                // Învelim NavHost-ul în Scaffold pentru bara de navigare[cite: 5]
                 Scaffold(
                     bottomBar = {
                         if (showBottomBar) {
@@ -90,7 +83,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    // Aplicăm padding-ul barei de navigare la NavHost[cite: 5]
                     NavHost(
                         navController = navController,
                         startDestination = startDestination,
@@ -107,9 +99,14 @@ class MainActivity : ComponentActivity() {
                         composable(BottomNavItem.Dashboard.route) {
                             DashboardScreen(
                                 navController = navController,
-                                viewModel = workoutViewModel,
+                                workoutViewModel = workoutViewModel,
+                                routinesViewModel = routinesViewModel,
                                 onStartWorkout = {
                                     activeWorkoutViewModel.resetWorkout()
+                                    navController.navigate("active_workout")
+                                },
+                                onStartRoutine = { routine, exercises ->
+                                    activeWorkoutViewModel.startWorkoutFromRoutine(routine, exercises)
                                     navController.navigate("active_workout")
                                 }
                             )
@@ -119,9 +116,21 @@ class MainActivity : ComponentActivity() {
                             ExerciseCatalogScreen(
                                 viewModel = exerciseViewModel,
                                 onExerciseSelected = { exercise ->
-                                    // Comportamentul la click depinde de unde am venit.
-                                    // Momentan îl lăsăm să adauge în antrenament și să dea pop.
                                     activeWorkoutViewModel.addExercise(exercise)
+                                    navController.popBackStack()
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        composable("catalog_selection/{routineId}") { backStackEntry ->
+                            val routineId = backStackEntry.arguments?.getString("routineId")?.toIntOrNull() ?: 0
+                            ExerciseCatalogScreen(
+                                viewModel = exerciseViewModel,
+                                onExerciseSelected = { exercise ->
+                                    routinesViewModel.addExerciseToRoutine(routineId, exercise)
                                     navController.popBackStack()
                                 },
                                 onBack = {
@@ -147,8 +156,26 @@ class MainActivity : ComponentActivity() {
                             StatsScreen(navController, workoutViewModel)
                         }
 
-                        composable(BottomNavItem.Store.route) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Store Screen") }
+                        composable(BottomNavItem.Social.route) {
+                            SocialScreen(navController = navController)
+                        }
+
+                        composable("history") {
+                            HistoryScreen(navController = navController, viewModel = historyViewModel)
+                        }
+
+                        composable("routines") {
+                            RoutinesScreen(navController = navController, viewModel = routinesViewModel)
+                        }
+
+                        composable("routine_details/{routineId}") { backStackEntry ->
+                            val routineId = backStackEntry.arguments?.getString("routineId")?.toIntOrNull() ?: 0
+                            RoutineDetailScreen(
+                                routineId = routineId,
+                                viewModel = routinesViewModel,
+                                onAddExercise = { navController.navigate("catalog_selection/$routineId") },
+                                onBack = { navController.popBackStack() }
+                            )
                         }
 
                         composable("active_workout") {
@@ -170,7 +197,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("settings") {
-                            SettingsScreen(navController = navController)
+                            SettingsScreen(navController = navController, viewModel = settingsViewModel)
                         }
                     }
                 }

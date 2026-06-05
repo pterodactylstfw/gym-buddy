@@ -1,6 +1,5 @@
 package com.corecoders.gymbuddy.screens
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.data.Exercise
 import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
@@ -39,34 +39,38 @@ fun ExerciseCatalogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Exercises", fontWeight = FontWeight.ExtraBold) },
+                title = { Text("Exercises", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("Cancel", color = Color(0xFF007AFF)) // Albastru iOS
+                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // 1. Search Bar (Rounded)
+            // 1. Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search exercises") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF2F2F7),
-                    unfocusedContainerColor = Color(0xFFF2F2F7),
-                    focusedBorderColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = Color.Transparent
                 )
             )
 
-            // 2. Filter Chips (Horizontal Scroll)
+            // 2. Filter Chips
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -80,20 +84,26 @@ fun ExerciseCatalogScreen(
                         label = { Text(category) },
                         shape = RoundedCornerShape(20.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color.Black,
-                            selectedLabelColor = Color.White
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.White,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline,
+                            enabled = true,
+                            selected = isSelected
                         )
                     )
                 }
             }
 
-            // 3. Exercises List (FĂRĂ PAGINARE)
+            // 3. Exercises List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Am schimbat din itemsIndexed in items simplu, deoarece nu mai numărăm poziția
                 items(exercises) { exercise ->
                     ExerciseItem(exercise = exercise, onClick = onExerciseSelected)
                 }
@@ -104,24 +114,41 @@ fun ExerciseCatalogScreen(
 
 @Composable
 fun ExerciseItem(exercise: Exercise, onClick: (Exercise) -> Unit) {
-    Row(
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick(exercise) }
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Thumbnail rotunjit
-        AsyncImage(
-            model = exercise.gifUrl,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFF2F2F7)),
-            contentScale = ContentScale.Crop
-        )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = exercise.gifUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.background),
+                contentScale = ContentScale.Crop
+            )
 
-        Column(modifier = Modifier.padding(start = 12.dp)) {
-            Text(exercise.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-            Text(exercise.targetMuscle, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(
+                    exercise.name,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    exercise.targetMuscle,
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }

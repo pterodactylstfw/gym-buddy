@@ -10,6 +10,7 @@ import com.corecoders.gymbuddy.data.WorkoutSet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import java.util.UUID
 
 data class ActiveSet(
@@ -28,11 +29,22 @@ data class ActiveExercise(
 class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
     // Numele antrenamentului, editabil de către utilizator
-    private val _workoutName = MutableStateFlow("Evening Workout")
+    private val _workoutName = MutableStateFlow(getDynamicWorkoutName())
     val workoutName = _workoutName.asStateFlow()
 
     private val _activeExercises = MutableStateFlow<List<ActiveExercise>>(emptyList())
     val activeExercises = _activeExercises.asStateFlow()
+
+    private fun getDynamicWorkoutName(): String {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val period = when (hour) {
+            in 5..11 -> "Morning"
+            in 12..16 -> "Afternoon"
+            in 17..21 -> "Evening"
+            else -> "Late Night"
+        }
+        return "$period Workout"
+    }
 
     fun updateWorkoutName(newName: String) {
         _workoutName.value = newName
@@ -44,11 +56,17 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
+    fun startWorkoutFromRoutine(routine: com.corecoders.gymbuddy.data.Routine, exercises: List<Exercise>) {
+        _workoutName.value = routine.name
+        _activeExercises.value = exercises.map { exercise ->
+            ActiveExercise(exercise = exercise, sets = listOf(ActiveSet()))
+        }
+    }
+
     fun addSetToExercise(exerciseIndex: Int) {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
 
-        // Magie UX: Copiem greutatea, repetările și TIPUL de la ultimul set (dacă există)
         val lastSet = currentExercise.sets.lastOrNull()
         val newSet = if (lastSet != null) {
             ActiveSet(weight = lastSet.weight, reps = lastSet.reps, setType = lastSet.setType)
@@ -81,7 +99,6 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     fun finishWorkout(onFinished: () -> Unit) {
         val completedSets = _activeExercises.value.flatMap { it.sets }.filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
         
-        // Prevenim salvarea antrenamentelor fără niciun set completat
         if (completedSets.isEmpty()) {
             onFinished()
             return
@@ -114,7 +131,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
     fun resetWorkout() {
         _activeExercises.value = emptyList()
-        _workoutName.value = "Evening Workout" // Resetăm și numele
+        _workoutName.value = getDynamicWorkoutName()
     }
 }
 

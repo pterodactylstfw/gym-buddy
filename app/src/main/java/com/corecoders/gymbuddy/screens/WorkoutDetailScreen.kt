@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corecoders.gymbuddy.data.AppDatabase
+import com.corecoders.gymbuddy.ui.theme.SuccessGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,17 +30,21 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
                 title = { Text("Workout Summary", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF007AFF))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFFF2F2F7))
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = Color(0xFFF2F2F7)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         if (sets.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Loading or no data...", color = Color.Gray)
+                Text("Loading or no data...", color = MaterialTheme.colorScheme.secondary)
             }
         } else {
             LazyColumn(
@@ -47,49 +52,50 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                groupedSets.forEach { (exerciseId, exerciseSets) ->
-                    item {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+                // Convertim map-ul în listă de perechi pentru a evita problemele de inferență în LazyColumn/items
+                val groupedList = groupedSets.toList()
+                
+                items(groupedList.size) { index ->
+                    val (exerciseId, exerciseSets) = groupedList[index]
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
 
-                                // AICI se face magia! Folosim noua noastră componentă pentru a trage numele real
-                                ExerciseNameHeader(exerciseId = exerciseId, database = database)
+                            ExerciseNameHeader(exerciseId = exerciseId, database = database)
 
-                                Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp)) {
-                                    Text("SET", modifier = Modifier.width(40.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp)) {
+                                Text("SET", modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text("KG", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("REPS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(24.dp))
+                            }
+
+                            exerciseSets.sortedBy { it.setNumber }.forEach { set ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("${set.setNumber}", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.onSurface)
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Text("KG", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Text("REPS", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(modifier = Modifier.width(24.dp))
-                                }
+                                    Text("${set.weight}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.onSurface)
+                                    Text("${set.reps}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.onSurface)
 
-                                exerciseSets.sortedBy { it.setNumber }.forEach { set ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp)
-                                            .background(Color(0xFFF9F9F9), RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 8.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text("${set.setNumber}", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                                        Spacer(modifier = Modifier.weight(1f))
-                                        Text("${set.weight}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp))
-                                        Text("${set.reps}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp))
-
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = "Done",
-                                            tint = Color(0xFF4CAF50),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "Done",
+                                        tint = SuccessGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
                             }
                         }
@@ -100,22 +106,19 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
     }
 }
 
-// O componentă separată care caută numele exercițiului fără să blocheze restul ecranului
 @Composable
 fun ExerciseNameHeader(exerciseId: String, database: AppDatabase) {
-    // Începem prin a arăta un text de încărcare scurt
     var exerciseName by remember { mutableStateOf("Loading...") }
 
-    // Această bucată de cod rulează în fundal imediat ce componenta apare pe ecran
     LaunchedEffect(exerciseId) {
         val name = database.exerciseDao().getExerciseNameById(exerciseId)
-        exerciseName = name ?: "Unknown Exercise" // Dacă l-a șters între timp, punem Unknown
+        exerciseName = name ?: "Unknown Exercise"
     }
 
     Text(
         text = exerciseName,
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.ExtraBold,
-        color = Color(0xFF007AFF)
+        color = MaterialTheme.colorScheme.primary
     )
 }

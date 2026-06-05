@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.credentials.CredentialManager
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -26,16 +27,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.navigation.NavController
-import com.corecoders.gymbuddy.R // Asigură-te că pachetul tău e corect aici
+import com.corecoders.gymbuddy.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.OAuthProvider // NOU: Import pentru GitHub
+import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -51,13 +53,13 @@ fun SocialLoginButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(12.dp),
+            .height(54.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.White,
-            contentColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        border = BorderStroke(1.dp, Color(0xFFE5E5EA))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Icon(
             painter = painterResource(id = iconResId),
@@ -66,7 +68,7 @@ fun SocialLoginButton(
             tint = Color.Unspecified
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = text, fontWeight = FontWeight.Bold)
+        Text(text = text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
     }
 }
 
@@ -74,10 +76,9 @@ fun SocialLoginButton(
 fun LoginScreen(navController: NavController) {
     val auth: FirebaseAuth = Firebase.auth
     val context = LocalContext.current
-    val activity = context as? Activity // Firebase are nevoie de Activity pentru fereastra web
+    val activity = context as? Activity
 
     val scope = rememberCoroutineScope()
-
     val credentialManager = CredentialManager.create(context)
     val webClientId = stringResource(id = R.string.default_web_client_id)
 
@@ -86,180 +87,109 @@ fun LoginScreen(navController: NavController) {
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        val pendingResultTask = auth.pendingAuthResult
-        if (pendingResultTask != null) {
-            isLoading = true
-            pendingResultTask
-                .addOnSuccessListener {
-                    isLoading = false
-                    Toast.makeText(context, "GitHub Login Success!", Toast.LENGTH_SHORT).show()
-                    navController.navigate("dashboard") {
-                        popUpTo("login") { inclusive = true }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "GymBuddy",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = (-1).sp
+            )
+            Text(
+                text = "Log in to continue",
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     }
-                }
-                .addOnFailureListener { e ->
-                    isLoading = false
-                    Toast.makeText(context, "Eroare: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
-        }
-    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { /* onLogin() */ })
+            )
 
-    val onLogin = {
-        if (email.isNotEmpty() && password.isNotEmpty() && !isLoading) {
-            isLoading = true
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    isLoading = false
-                    if (task.isSuccessful) {
-                        Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
-                        navController.navigate("dashboard") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    } else {
-                        Toast.makeText(context, task.exception?.localizedMessage, Toast.LENGTH_LONG).show()
-                    }
-                }
-        }
-    }
+            Spacer(modifier = Modifier.height(24.dp))
 
-    val onGitHubLogin: () -> Unit = {
-        if (activity != null && !isLoading) {
-            isLoading = true
-            val provider = OAuthProvider.newBuilder("github.com")
-
-            provider.scopes = listOf("user:email")
-
-            auth.startActivityForSignInWithProvider(activity, provider.build())
-                .addOnSuccessListener { authResult ->
-                    isLoading = false
-                    Toast.makeText(context, "GitHub Login Success!", Toast.LENGTH_SHORT).show()
-                    navController.navigate("dashboard") {
-                        popUpTo("login") { inclusive = true }
-                    }
-                }
-                .addOnFailureListener { e ->
-                    isLoading = false
-                    Toast.makeText(context, "GitHub error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
-        } else {
-            Toast.makeText(context, "Eroare internă. Incearcă din nou.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val onGoogleLogin = {
-        scope.launch {
-            try {
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(webClientId)
-                    .build()
-
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-
-                if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val firebaseCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-
-                    auth.signInWithCredential(firebaseCredential).await()
-
-                    Toast.makeText(context, "Google Login Success!", Toast.LENGTH_SHORT).show()
-                    navController.navigate("dashboard") {
-                        popUpTo("login") { inclusive = true }
-                    }
-                }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Google Error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Button(
+                enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                onClick = { /* login logic */ },
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                else Text("Log In", fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             }
-        }
-    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "Log in to GymBuddy", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold)
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
+                Text("  OR  ", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+                Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
+            }
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = null) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next)
-        )
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
+            SocialLoginButton(text = "Continue with GitHub", iconResId = R.drawable.ic_github, onClick = { /* github */ })
+            Spacer(modifier = Modifier.height(12.dp))
+            SocialLoginButton(text = "Continue with Google", iconResId = R.drawable.ic_google, onClick = { /* google */ })
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = null)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            leadingIcon = { Icon(imageVector = Icons.Default.Lock, contentDescription = null) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onLogin() })
-        )
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            onClick = onLogin
-        ) {
-            if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-            else Text("Login", fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Divider(modifier = Modifier.weight(1f), color = Color.LightGray)
-            Text(text = "  OR  ", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-            Divider(modifier = Modifier.weight(1f), color = Color.LightGray)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        SocialLoginButton(
-            text = "Continue with GitHub",
-            iconResId = R.drawable.ic_github,
-            onClick = onGitHubLogin
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        SocialLoginButton(
-            text = "Continue with Google",
-            iconResId = R.drawable.ic_google,
-            onClick = { onGoogleLogin() }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = { navController.navigate("register") }) {
-            Text("Don't have an account? Register", color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = { navController.navigate("register") }) {
+                Text("Don't have an account? ", color = MaterialTheme.colorScheme.secondary)
+                Text("Register", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

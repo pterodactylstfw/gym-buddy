@@ -3,6 +3,7 @@ package com.corecoders.gymbuddy.navigation
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -20,7 +21,7 @@ fun BottomNavigationBar(navController: NavController) {
         BottomNavItem.Dashboard,
         BottomNavItem.Stats,
         BottomNavItem.Catalog,
-        BottomNavItem.Store,
+        BottomNavItem.Social,
         BottomNavItem.Profile
     )
 
@@ -28,9 +29,9 @@ fun BottomNavigationBar(navController: NavController) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = Color(0xFFF5F5F5), // Același gri deschis ca fundalul aplicației din poză
-        tonalElevation = 0.dp, // Fără umbră urâtă
-        modifier = Modifier.height(80.dp) // O facem puțin mai înaltă pentru aspect premium
+        containerColor = MaterialTheme.colorScheme.background,
+        tonalElevation = 0.dp,
+        modifier = Modifier.height(80.dp)
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.route
@@ -40,7 +41,7 @@ fun BottomNavigationBar(navController: NavController) {
                     Icon(
                         imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = item.route,
-                        modifier = Modifier.size(28.dp) // Iconițe un pic mai mari
+                        modifier = Modifier.size(28.dp)
                     )
                 },
                 selected = isSelected,
@@ -53,12 +54,11 @@ fun BottomNavigationBar(navController: NavController) {
                         }
                     }
                 },
-                // ASCUNDEM TEXTUL complet pentru a replica poza
                 alwaysShowLabel = false,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.Black, // Iconița selectată e neagră
-                    unselectedIconColor = Color.Gray, // Celelalte sunt gri
-                    indicatorColor = Color.Transparent // Scoatem "bula" urâtă din spatele iconiței din Material 3
+                    selectedIconColor = MaterialTheme.colorScheme.primary, // Roșu Lift Card când e selectat
+                    unselectedIconColor = MaterialTheme.colorScheme.secondary, // Gri când nu e selectat
+                    indicatorColor = Color.Transparent
                 )
             )
         }

@@ -25,12 +25,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.corecoders.gymbuddy.ui.theme.OLEDBlack
-import com.corecoders.gymbuddy.ui.theme.SurgicalRed
-import com.corecoders.gymbuddy.ui.theme.SlateSurface
-import com.corecoders.gymbuddy.ui.theme.SurgicalDivider
-import com.corecoders.gymbuddy.ui.theme.PRGold
 import com.corecoders.gymbuddy.ui.theme.SuccessGreen
+import com.corecoders.gymbuddy.ui.theme.WarningOrange
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,20 +47,24 @@ fun ActiveWorkoutScreen(
                         "ACTIVE SESSION", 
                         style = MaterialTheme.typography.labelSmall,
                         letterSpacing = 1.sp,
-                        color = SurgicalRed
+                        color = MaterialTheme.colorScheme.primary
                     ) 
                 },
                 actions = {
                     TextButton(onClick = {
                         viewModel.finishWorkout { onFinishClick() }
                     }) {
-                        Text("FINISH", style = MaterialTheme.typography.titleMedium, color = SurgicalRed)
+                        Text("FINISH", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = OLEDBlack)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    actionIconContentColor = MaterialTheme.colorScheme.primary
+                )
             )
         },
-        containerColor = OLEDBlack
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
@@ -72,12 +72,12 @@ fun ActiveWorkoutScreen(
             BasicTextField(
                 value = workoutName,
                 onValueChange = { viewModel.updateWorkoutName(it) },
-                textStyle = MaterialTheme.typography.titleLarge.copy(color = Color.White),
-                cursorBrush = SolidColor(SurgicalRed),
+                textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                 decorationBox = { innerTextField ->
                     if (workoutName.isEmpty()) {
-                        Text("Workout Name", color = Color.Gray, style = MaterialTheme.typography.titleLarge)
+                        Text("Workout Name", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.titleLarge)
                     }
                     innerTextField()
                 }
@@ -105,7 +105,7 @@ fun ActiveWorkoutScreen(
                     .padding(24.dp)
                     .height(60.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SurgicalRed)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text("ADD EXERCISE", style = MaterialTheme.typography.labelSmall, color = Color.White)
             }
@@ -121,8 +121,8 @@ fun ExerciseCard(
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = SlateSurface),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, SurgicalDivider)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             // Header Exercițiu
@@ -130,7 +130,7 @@ fun ExerciseCard(
                 Text(
                     text = activeExercise.exercise.name.uppercase(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -139,11 +139,11 @@ fun ExerciseCard(
 
             // Labels pentru coloane
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                Text("SET", modifier = Modifier.width(36.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text("TYPE", modifier = Modifier.width(44.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("SET", modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("TYPE", modifier = Modifier.width(44.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("KG", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Text("REPS", modifier = Modifier.width(60.dp), color = Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("KG", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text("REPS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.width(40.dp))
             }
 
@@ -153,14 +153,14 @@ fun ExerciseCard(
                 
                 // Set Type Color
                 val typeColor = when(activeSet.setType) {
-                    "W" -> PRGold
+                    "W" -> WarningOrange
                     "D" -> SuccessGreen
-                    "F" -> SurgicalRed
-                    else -> if (isCompleted) SurgicalRed else Color.Gray
+                    "F" -> MaterialTheme.colorScheme.primary
+                    else -> if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 }
                 
                 // Hairline Divider
-                HorizontalDivider(thickness = 0.5.dp, color = SurgicalDivider)
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 
                 Row(
                     modifier = Modifier
@@ -174,7 +174,7 @@ fun ExerciseCard(
                         "${setIndex + 1}", 
                         fontWeight = FontWeight.Bold, 
                         modifier = Modifier.width(36.dp),
-                        color = if (isCompleted) SurgicalRed else Color.White
+                        color = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
 
                     // Type Toggle (N, W, D, F)
@@ -236,12 +236,12 @@ fun ExerciseCard(
                         modifier = Modifier
                             .size(28.dp)
                             .background(
-                                if (isCompleted) SurgicalRed else Color.Transparent,
+                                if (isCompleted) MaterialTheme.colorScheme.primary else Color.Transparent,
                                 CircleShape
                             )
                             .border(
                                 1.5.dp,
-                                if (isCompleted) SurgicalRed else SurgicalDivider,
+                                if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                 CircleShape
                             )
                             .clickable {
@@ -266,7 +266,7 @@ fun ExerciseCard(
                 onClick = { viewModel.addSetToExercise(exerciseIndex) },
                 modifier = Modifier.align(Alignment.Start).padding(top = 8.dp)
             ) {
-                Text("+ ADD SET", color = SurgicalRed, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 0.5.sp)
+                Text("+ ADD SET", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 0.5.sp)
             }
         }
     }
@@ -285,20 +285,23 @@ fun SetInputField(
         modifier = Modifier
             .width(60.dp)
             .height(36.dp)
-            .background(if (isCompleted) Color.Transparent else OLEDBlack.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .background(
+                if (isCompleted) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant, 
+                RoundedCornerShape(8.dp)
+            )
             .border(
                 0.5.dp, 
-                if (isCompleted) SurgicalRed.copy(alpha = 0.5f) else SurgicalDivider, 
+                if (isCompleted) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline, 
                 RoundedCornerShape(8.dp)
             )
             .padding(top = 8.dp),
         textStyle = TextStyle(
-            color = if (isCompleted) SurgicalRed else Color.White,
+            color = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
             textAlign = TextAlign.Center
         ),
         singleLine = true,
-        cursorBrush = SolidColor(SurgicalRed)
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
     )
 }

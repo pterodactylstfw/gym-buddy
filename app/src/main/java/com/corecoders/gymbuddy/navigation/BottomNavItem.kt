@@ -19,8 +19,8 @@ sealed class BottomNavItem(
     // 3. Catalog Exerciții (Lupa din poză)
     object Catalog : BottomNavItem("catalog", Icons.Filled.Search, Icons.Outlined.Search)
 
-    // 4. Magazin / Premium (Plasa de cumpărături din poză)
-    object Store : BottomNavItem("store", Icons.Filled.ShoppingBag, Icons.Outlined.ShoppingBag)
+    // 4. Social / Feed (Grup de oameni în loc de ShoppingBag)
+    object Social : BottomNavItem("social", Icons.Filled.Groups, Icons.Outlined.Groups)
 
     // 5. Profil (Folosim iconița standard momentan, dar o putem schimba cu poza userului)
     object Profile : BottomNavItem("profile", Icons.Filled.Person, Icons.Outlined.Person)

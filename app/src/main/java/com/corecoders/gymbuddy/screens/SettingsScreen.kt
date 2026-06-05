@@ -14,38 +14,41 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.corecoders.gymbuddy.ui.theme.OLEDBlack
-import com.corecoders.gymbuddy.ui.theme.SlateSurface
-import com.corecoders.gymbuddy.ui.theme.SurgicalRed
-import com.corecoders.gymbuddy.ui.theme.SurgicalDivider
+import com.corecoders.gymbuddy.viewmodel.SettingsViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
     val scrollState = rememberScrollState()
+    val darkMode by viewModel.darkMode.collectAsState()
+    val unitSystem by viewModel.unitSystemMetric.collectAsState()
+    val autoComplete by viewModel.autoCompleteSet.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SETTINGS", style = MaterialTheme.typography.titleMedium, color = Color.White) },
+                title = { Text("Settings", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = OLEDBlack)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = OLEDBlack
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -71,22 +74,19 @@ fun SettingsScreen(navController: NavController) {
             // --- PREFERENCES ---
             SettingsGroupHeader("PREFERENCES")
             SettingsCard {
-                var darkMode by remember { mutableStateOf(true) }
-                var unitSystem by remember { mutableStateOf(true) }
-
                 SettingsSwitchRow(
                     icon = Icons.Outlined.DarkMode,
                     title = "Dark Mode",
                     checked = darkMode,
-                    onCheckedChange = { darkMode = it }
+                    onCheckedChange = { viewModel.toggleDarkMode(it) }
                 )
-                HorizontalDivider(color = SurgicalDivider, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
                 SettingsSwitchRow(
                     icon = Icons.Outlined.Language,
                     title = "Unit System",
-                    subtitle = "Metric (kg, km)",
+                    subtitle = if (unitSystem) "Metric (kg, km)" else "Imperial (lb, mi)",
                     checked = unitSystem,
-                    onCheckedChange = { unitSystem = it }
+                    onCheckedChange = { viewModel.toggleUnitSystem(it) }
                 )
             }
 
@@ -95,13 +95,12 @@ fun SettingsScreen(navController: NavController) {
             // --- WORKOUT ---
             SettingsGroupHeader("WORKOUT")
             SettingsCard {
-                var autoComplete by remember { mutableStateOf(true) }
                 SettingsSwitchRow(
                     icon = Icons.Outlined.CheckCircle,
                     title = "Auto Complete Set",
                     subtitle = "Log sets on numeric entry",
                     checked = autoComplete,
-                    onCheckedChange = { autoComplete = it }
+                    onCheckedChange = { viewModel.toggleAutoCompleteSet(it) }
                 )
             }
 
@@ -110,9 +109,9 @@ fun SettingsScreen(navController: NavController) {
             // --- SIGN OUT BUTTON ---
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SlateSurface),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, SurgicalDivider),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
@@ -124,7 +123,7 @@ fun SettingsScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Sign Out", color = SurgicalRed, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
+                    Text("Sign Out", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
                 }
             }
 
@@ -137,7 +136,7 @@ fun SettingsScreen(navController: NavController) {
 fun SettingsGroupHeader(title: String) {
     Text(
         text = title,
-        color = Color.Gray,
+        color = MaterialTheme.colorScheme.secondary,
         style = MaterialTheme.typography.labelSmall,
         letterSpacing = 1.5.sp,
         modifier = Modifier.padding(start = 12.dp, bottom = 12.dp)
@@ -148,9 +147,9 @@ fun SettingsGroupHeader(title: String) {
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SlateSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, SurgicalDivider),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(content = content)
@@ -166,13 +165,13 @@ fun SettingsNavRow(icon: ImageVector, title: String, subtitle: String, onClick: 
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = SurgicalRed, modifier = Modifier.size(24.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-            Text(text = subtitle, color = Color.Gray, fontSize = 12.sp)
+            Text(text = title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp)
+            Text(text = subtitle, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.DarkGray)
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
     }
 }
 
@@ -184,12 +183,12 @@ fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String? = null
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = SurgicalRed, modifier = Modifier.size(24.dp))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+            Text(text = title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp)
             if (subtitle != null) {
-                Text(text = subtitle, color = Color.Gray, fontSize = 12.sp)
+                Text(text = subtitle, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
             }
         }
         Switch(
@@ -197,9 +196,9 @@ fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String? = null
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = SurgicalRed,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = Color.Gray,
-                uncheckedTrackColor = Color.DarkGray,
+                uncheckedTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                 uncheckedBorderColor = Color.Transparent
             )
         )

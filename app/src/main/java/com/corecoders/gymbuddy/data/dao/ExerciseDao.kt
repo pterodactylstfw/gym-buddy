@@ -20,4 +20,7 @@ interface ExerciseDao {
 
     @Query("SELECT name FROM exercises WHERE id = :exerciseId LIMIT 1")
     suspend fun getExerciseNameById(exerciseId: String): String?
+
+    @Query("SELECT * FROM exercises WHERE id IN (:exerciseIds)")
+    fun getExercisesByIds(exerciseIds: List<String>): Flow<List<Exercise>>
 }

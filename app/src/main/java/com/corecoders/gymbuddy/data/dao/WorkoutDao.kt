@@ -26,6 +26,9 @@ interface WorkoutDao {
     @Query("SELECT COUNT(*) FROM workouts")
     fun getWorkoutsCount(): Flow<Int>
 
+    @Query("SELECT COUNT(DISTINCT (date / 86400000)) FROM workouts WHERE date >= :startOfWeek")
+    fun getDistinctWorkoutDaysInRange(startOfWeek: Long): Flow<Int>
+
     @Query("SELECT SUM(weight * reps) FROM workout_sets WHERE isCompleted = 1")
     fun getTotalVolume(): Flow<Double?>
 
