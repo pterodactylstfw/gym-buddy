@@ -1,5 +1,7 @@
 package com.corecoders.gymbuddy.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -54,8 +56,41 @@ class ProfileViewModel(
     val age = userPreferences.ageFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
     val weight = userPreferences.weightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0f)
     val height = userPreferences.heightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
+    val trainingFrequency = userPreferences.trainingFrequencyFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 4)
     val experienceLevel = userPreferences.experienceLevelFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
     val fitnessGoal = userPreferences.fitnessGoalFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val profilePictureUri = userPreferences.profilePictureUriFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val bodyFat = userPreferences.bodyFatFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val muscleMass = userPreferences.muscleMassFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val waistSize = userPreferences.waistSizeFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+
+    fun updateBodyComposition(bodyFat: String?, muscleMass: String?, waistSize: String?) {
+        viewModelScope.launch {
+            userPreferences.updateBodyComposition(bodyFat, muscleMass, waistSize)
+        }
+    }
+
+    fun saveProfilePicture(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val file = java.io.File(context.filesDir, "profile_pic_${System.currentTimeMillis()}.jpg")
+                val outputStream = java.io.FileOutputStream(file)
+                inputStream?.copyTo(outputStream)
+                inputStream?.close()
+                outputStream.close()
+                userPreferences.updateProfilePictureUri(file.absolutePath)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun removeProfilePicture() {
+        viewModelScope.launch {
+            userPreferences.updateProfilePictureUri("")
+        }
+    }
 
     fun signOut() {
         viewModelScope.launch {

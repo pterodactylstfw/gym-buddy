@@ -181,7 +181,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(BottomNavItem.Stats.route) {
-                            StatsScreen(navController, workoutViewModel)
+                            StatsScreen(navController, workoutViewModel, profileViewModel)
                         }
 
                         composable(BottomNavItem.Social.route) {
@@ -211,6 +211,12 @@ class MainActivity : ComponentActivity() {
                                 viewModel = activeWorkoutViewModel,
                                 onAddExerciseClick = { navController.navigate(BottomNavItem.Catalog.route) },
                                 onFinishClick = {
+                                    activeWorkoutViewModel.resetWorkout()
+                                    navController.navigate(BottomNavItem.Dashboard.route) {
+                                        popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }
+                                    }
+                                },
+                                onCancelClick = {
                                     activeWorkoutViewModel.resetWorkout()
                                     navController.navigate(BottomNavItem.Dashboard.route) {
                                         popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }

@@ -35,6 +35,8 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     private val _activeExercises = MutableStateFlow<List<ActiveExercise>>(emptyList())
     val activeExercises = _activeExercises.asStateFlow()
 
+    private var startTime: Long = System.currentTimeMillis()
+
     private fun getDynamicWorkoutName(): String {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         val period = when (hour) {
@@ -56,8 +58,17 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
+    fun removeExercise(index: Int) {
+        val currentList = _activeExercises.value.toMutableList()
+        if (index in currentList.indices) {
+            currentList.removeAt(index)
+            _activeExercises.value = currentList
+        }
+    }
+
     fun startWorkoutFromRoutine(routine: com.corecoders.gymbuddy.data.Routine, exercises: List<Exercise>) {
         _workoutName.value = routine.name
+        startTime = System.currentTimeMillis()
         _activeExercises.value = exercises.map { exercise ->
             ActiveExercise(exercise = exercise, sets = listOf(ActiveSet()))
         }
@@ -106,7 +117,8 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
         viewModelScope.launch {
             val finalName = if (_workoutName.value.isBlank()) "Workout" else _workoutName.value
-            val newWorkout = Workout(name = finalName)
+            val durationMinutes = ((System.currentTimeMillis() - startTime) / 60000).toInt()
+            val newWorkout = Workout(name = finalName, durationMinutes = durationMinutes)
             val workoutId = workoutDao.insertWorkout(newWorkout).toInt()
 
             _activeExercises.value.forEach { activeExercise ->
@@ -132,6 +144,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     fun resetWorkout() {
         _activeExercises.value = emptyList()
         _workoutName.value = getDynamicWorkoutName()
+        startTime = System.currentTimeMillis()
     }
 }
 

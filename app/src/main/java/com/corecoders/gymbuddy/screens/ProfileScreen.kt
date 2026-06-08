@@ -25,6 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
+import java.io.File
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,6 +66,17 @@ fun ProfileScreen(
     val age by viewModel.age.collectAsState()
     val weight by viewModel.weight.collectAsState()
     val experience by viewModel.experienceLevel.collectAsState()
+    val profilePictureUri by viewModel.profilePictureUri.collectAsState()
+
+    var showPhotoMenu by remember { mutableStateOf(false) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                viewModel.saveProfilePicture(context, uri)
+            }
+        }
+    )
 
     Scaffold(
         topBar = {
@@ -105,7 +122,14 @@ fun ProfileScreen(
             val subtitleParts = listOf(experienceStr, ageStr, weightStr).filter { it.isNotEmpty() }
             val subtitle = if (subtitleParts.isNotEmpty()) subtitleParts.joinToString(" • ") else "Welcome to GymBuddy!"
 
-            ProfileHeader(user?.displayName ?: "User", subtitle, totalWorkouts, routines.size)
+            ProfileHeader(
+                displayName = user?.displayName ?: "User", 
+                subtitle = subtitle, 
+                workoutCount = totalWorkouts, 
+                routineCount = routines.size,
+                profilePictureUri = profilePictureUri,
+                onPhotoClick = { showPhotoMenu = true }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -179,28 +203,80 @@ fun ProfileScreen(
                 }
             )
         }
+
+        if (showPhotoMenu) {
+            ModalBottomSheet(
+                onDismissRequest = { showPhotoMenu = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Profile Photo",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+                    ListItem(
+                        headlineContent = { Text("Choose from Library") },
+                        modifier = Modifier.clickable {
+                            showPhotoMenu = false
+                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
+                    )
+                    if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                        ListItem(
+                            headlineContent = { Text("Remove Photo", color = MaterialTheme.colorScheme.error) },
+                            modifier = Modifier.clickable {
+                                showPhotoMenu = false
+                                viewModel.removeProfilePicture()
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun ProfileHeader(displayName: String, subtitle: String, workoutCount: Int, routineCount: Int) {
+fun ProfileHeader(
+    displayName: String, 
+    subtitle: String, 
+    workoutCount: Int, 
+    routineCount: Int,
+    profilePictureUri: String,
+    onPhotoClick: () -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Poza de profil (Placeholder)
+            // Poza de profil
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
-                    .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    .clickable { onPhotoClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = displayName.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Black
-                )
+                if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                    AsyncImage(
+                        model = File(profilePictureUri),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = displayName.take(1).uppercase(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(20.dp))

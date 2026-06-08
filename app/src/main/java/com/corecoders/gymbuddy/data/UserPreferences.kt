@@ -34,6 +34,10 @@ class UserPreferences(private val context: Context) {
         val FITNESS_GOAL = stringPreferencesKey("fitness_goal")
         val EXPERIENCE_LEVEL = stringPreferencesKey("experience_level")
         val GENDER = stringPreferencesKey("gender")
+        val PROFILE_PICTURE_URI = stringPreferencesKey("profile_picture_uri")
+        val BODY_FAT = stringPreferencesKey("body_fat")
+        val MUSCLE_MASS = stringPreferencesKey("muscle_mass")
+        val WAIST_SIZE = stringPreferencesKey("waist_size")
     }
 
     private fun <T> getFlow(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
@@ -62,6 +66,10 @@ class UserPreferences(private val context: Context) {
     val fitnessGoalFlow: Flow<String> = getFlow(PreferencesKeys.FITNESS_GOAL, "")
     val experienceLevelFlow: Flow<String> = getFlow(PreferencesKeys.EXPERIENCE_LEVEL, "")
     val genderFlow: Flow<String> = getFlow(PreferencesKeys.GENDER, "")
+    val profilePictureUriFlow: Flow<String> = getFlow(PreferencesKeys.PROFILE_PICTURE_URI, "")
+    val bodyFatFlow: Flow<String> = getFlow(PreferencesKeys.BODY_FAT, "")
+    val muscleMassFlow: Flow<String> = getFlow(PreferencesKeys.MUSCLE_MASS, "")
+    val waistSizeFlow: Flow<String> = getFlow(PreferencesKeys.WAIST_SIZE, "")
 
     suspend fun updateDarkMode(enabled: Boolean) {
         context.dataStore.edit { it[PreferencesKeys.DARK_MODE] = enabled }
@@ -77,6 +85,18 @@ class UserPreferences(private val context: Context) {
     
     suspend fun updateOnboardingCompleted(completed: Boolean) {
         context.dataStore.edit { it[PreferencesKeys.ONBOARDING_COMPLETED] = completed }
+    }
+
+    suspend fun updateProfilePictureUri(uri: String) {
+        context.dataStore.edit { it[PreferencesKeys.PROFILE_PICTURE_URI] = uri }
+    }
+
+    suspend fun updateBodyComposition(bodyFat: String?, muscleMass: String?, waistSize: String?) {
+        context.dataStore.edit { prefs ->
+            bodyFat?.let { prefs[PreferencesKeys.BODY_FAT] = it }
+            muscleMass?.let { prefs[PreferencesKeys.MUSCLE_MASS] = it }
+            waistSize?.let { prefs[PreferencesKeys.WAIST_SIZE] = it }
+        }
     }
 
     suspend fun updateProfileData(
@@ -112,6 +132,10 @@ class UserPreferences(private val context: Context) {
             prefs.remove(PreferencesKeys.FITNESS_GOAL)
             prefs.remove(PreferencesKeys.EXPERIENCE_LEVEL)
             prefs.remove(PreferencesKeys.GENDER)
+            prefs.remove(PreferencesKeys.PROFILE_PICTURE_URI)
+            prefs.remove(PreferencesKeys.BODY_FAT)
+            prefs.remove(PreferencesKeys.MUSCLE_MASS)
+            prefs.remove(PreferencesKeys.WAIST_SIZE)
         }
     }
 }
