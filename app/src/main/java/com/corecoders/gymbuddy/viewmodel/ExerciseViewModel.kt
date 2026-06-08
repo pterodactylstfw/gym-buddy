@@ -34,7 +34,11 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
 
         // Filtrare după categorie (dacă e selectat ceva diferit de "All")
         if (!category.isNullOrBlank() && category != "All") {
-            filtered = filtered.filter { it.bodyPart.contains(category, ignoreCase = true) }
+            filtered = filtered.filter { 
+                it.bodyPart.contains(category, ignoreCase = true) || 
+                it.targetMuscle.contains(category, ignoreCase = true) ||
+                it.name.contains(category, ignoreCase = true)
+            }
         }
 
         // Filtrare după text
@@ -116,15 +120,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     }
 
     private fun fetchCategories() {
-        viewModelScope.launch {
-            try {
-                val response = ApiClient.exerciseApi.getBodyParts()
-                val partList = response.data.map { it.name.lowercase().replaceFirstChar { char -> char.uppercase() } }
-                _categories.value = listOf("All") + partList
-            } catch (e: Exception) {
-                println("Failed to fetch categories: ${e.message}")
-            }
-        }
+        _categories.value = listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Cardio")
     }
 
     fun onSearchQueryChanged(query: String) {
