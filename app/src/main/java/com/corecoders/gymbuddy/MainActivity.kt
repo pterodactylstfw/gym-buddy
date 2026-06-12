@@ -17,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import com.corecoders.gymbuddy.data.AppDatabase
 import com.corecoders.gymbuddy.data.UserPreferences
 import com.corecoders.gymbuddy.navigation.BottomNavItem
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     factory = ActiveWorkoutViewModelFactory(database.workoutDao())
                 )
                 val profileViewModel: ProfileViewModel = viewModel(
-                    factory = ProfileViewModelFactory(database.workoutDao(), database.routineDao(), userPreferences)
+                    factory = ProfileViewModelFactory(database, database.workoutDao(), database.routineDao(), userPreferences)
                 )
                 val historyViewModel: HistoryViewModel = viewModel(
                     factory = HistoryViewModelFactory(database.workoutDao())
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
                 val onboardingViewModel: OnboardingViewModel = viewModel(
                     factory = OnboardingViewModelFactory(userPreferences)
                 )
+                val socialViewModel: SocialViewModel = viewModel()
 
                 val onboardingCompleted by userPreferences.onboardingCompletedFlow.collectAsState(initial = null)
 
@@ -105,7 +107,16 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable("login") {
-                            LoginScreen(navController = navController)
+                            LoginScreen(
+                                navController = navController,
+                                onLoginSuccess = {
+                                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                    scope.launch { userPreferences.updateOnboardingCompleted(true) }
+                                    navController.navigate(BottomNavItem.Dashboard.route) {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                }
+                            )
                         }
 
                         composable("register") {
@@ -185,7 +196,11 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(BottomNavItem.Social.route) {
-                            SocialScreen(navController = navController)
+                            SocialScreen(navController = navController, viewModel = socialViewModel)
+                        }
+
+                        composable("find_friends") {
+                            FindFriendsScreen(navController = navController, viewModel = socialViewModel)
                         }
 
                         composable("history") {
@@ -210,10 +225,16 @@ class MainActivity : ComponentActivity() {
                             ActiveWorkoutScreen(
                                 viewModel = activeWorkoutViewModel,
                                 onAddExerciseClick = { navController.navigate(BottomNavItem.Catalog.route) },
-                                onFinishClick = {
+                                onFinishClick = { workoutId ->
                                     activeWorkoutViewModel.resetWorkout()
-                                    navController.navigate(BottomNavItem.Dashboard.route) {
-                                        popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }
+                                    if (workoutId != null) {
+                                        navController.navigate("workout_summary/$workoutId") {
+                                            popUpTo(BottomNavItem.Dashboard.route) { inclusive = false }
+                                        }
+                                    } else {
+                                        navController.navigate(BottomNavItem.Dashboard.route) {
+                                            popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }
+                                        }
                                     }
                                 },
                                 onCancelClick = {
@@ -232,6 +253,15 @@ class MainActivity : ComponentActivity() {
 
                         composable("settings") {
                             SettingsScreen(navController = navController, viewModel = settingsViewModel)
+                        }
+
+                        composable("workout_summary/{workoutId}") { backStackEntry ->
+                            val workoutId = backStackEntry.arguments?.getString("workoutId")?.toIntOrNull() ?: 0
+                            WorkoutSummaryScreen(
+                                workoutId = workoutId,
+                                database = database,
+                                navController = navController
+                            )
                         }
                     }
                 }

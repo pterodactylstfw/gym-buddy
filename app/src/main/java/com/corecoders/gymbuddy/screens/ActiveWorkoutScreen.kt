@@ -36,7 +36,7 @@ import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 fun ActiveWorkoutScreen(
     viewModel: ActiveWorkoutViewModel,
     onAddExerciseClick: () -> Unit,
-    onFinishClick: () -> Unit,
+    onFinishClick: (Int?) -> Unit,
     onCancelClick: () -> Unit
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -61,7 +61,7 @@ fun ActiveWorkoutScreen(
                 },
                 actions = {
                     TextButton(onClick = {
-                        viewModel.finishWorkout { onFinishClick() }
+                        viewModel.finishWorkout { workoutId -> onFinishClick(workoutId) }
                     }) {
                         Text("FINISH", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     }

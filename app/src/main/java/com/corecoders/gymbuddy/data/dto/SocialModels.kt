@@ -1,0 +1,24 @@
+package com.corecoders.gymbuddy.data.dto
+
+data class UserProfile(
+    val userId: String = "",
+    val username: String = "",
+    val email: String = "",
+    val name: String = "",
+    val avatarUri: String = "",
+    val friends: List<String> = emptyList()
+)
+
+data class SocialPostDto(
+    val postId: String = "",
+    val userId: String = "",
+    val username: String = "",
+    val userAvatar: String = "",
+    val workoutName: String = "",
+    val timestamp: Long = 0L,
+    val stats: String = "",
+    val exercises: List<String> = emptyList(),
+    val claps: Int = 0,
+    val comments: Int = 0,
+    val clappedBy: List<String> = emptyList()
+)

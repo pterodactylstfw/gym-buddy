@@ -27,6 +27,12 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout_sets WHERE workoutId = :workoutId")
     fun getSetsforWorkout(workoutId: Int): Flow<List<WorkoutSet>>
 
+    @Query("SELECT * FROM workouts WHERE id = :workoutId")
+    suspend fun getWorkoutById(workoutId: Int): Workout?
+
+    @Query("SELECT * FROM workout_sets WHERE workoutId = :workoutId")
+    suspend fun getSetsForWorkoutSync(workoutId: Int): List<WorkoutSet>
+
     // În WorkoutDao.kt
     @Query("SELECT COUNT(*) FROM workouts")
     fun getWorkoutsCount(): Flow<Int>
@@ -43,13 +49,12 @@ interface WorkoutDao {
     @Query("SELECT SUM(durationMinutes) FROM workouts")
     fun getTotalDuration(): Flow<Int?>
 
-    @Query("""
-        SELECT e.bodyPart, COUNT(ws.id) as setCount
-        FROM workout_sets ws
-        INNER JOIN exercises e ON ws.exerciseId = e.id
-        WHERE ws.isCompleted = 1
-        GROUP BY e.bodyPart
-        ORDER BY setCount DESC
-    """)
+    @Query("SELECT e.bodyPart, COUNT(ws.id) as setCount FROM workout_sets ws INNER JOIN exercises e ON ws.exerciseId = e.id WHERE ws.isCompleted = 1 GROUP BY e.bodyPart ORDER BY setCount DESC")
     fun getMuscleSetCounts(): Flow<List<MuscleSetCount>>
+
+    @Query("DELETE FROM workouts")
+    suspend fun clearWorkouts()
+
+    @Query("DELETE FROM workout_sets")
+    suspend fun clearWorkoutSets()
 }

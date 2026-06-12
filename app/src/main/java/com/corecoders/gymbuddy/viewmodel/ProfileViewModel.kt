@@ -14,7 +14,10 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.Dispatchers
+
 class ProfileViewModel(
+    private val database: com.corecoders.gymbuddy.data.AppDatabase,
     private val workoutDao: WorkoutDao,
     private val routineDao: RoutineDao,
     private val userPreferences: UserPreferences
@@ -95,6 +98,12 @@ class ProfileViewModel(
     fun signOut() {
         viewModelScope.launch {
             userPreferences.clearProfileData()
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                workoutDao.clearWorkouts()
+                workoutDao.clearWorkoutSets()
+                routineDao.clearRoutines()
+                routineDao.clearRoutineExercises()
+            }
             auth.signOut()
         }
     }
@@ -106,6 +115,12 @@ class ProfileViewModel(
                 if (task.isSuccessful) {
                     viewModelScope.launch {
                         userPreferences.clearProfileData()
+                        kotlinx.coroutines.withContext(Dispatchers.IO) {
+                            workoutDao.clearWorkouts()
+                            workoutDao.clearWorkoutSets()
+                            routineDao.clearRoutines()
+                            routineDao.clearRoutineExercises()
+                        }
                         onSuccess()
                     }
                 } else {
@@ -119,6 +134,7 @@ class ProfileViewModel(
 }
 
 class ProfileViewModelFactory(
+    private val database: com.corecoders.gymbuddy.data.AppDatabase,
     private val workoutDao: WorkoutDao,
     private val routineDao: RoutineDao,
     private val userPreferences: UserPreferences
@@ -126,7 +142,7 @@ class ProfileViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if(modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ProfileViewModel(workoutDao, routineDao, userPreferences) as T
+            return ProfileViewModel(database, workoutDao, routineDao, userPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

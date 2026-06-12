@@ -33,6 +33,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.userProfileChangeRequest
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, kotlin.ExperimentalStdlibApi::class)
 @Composable
@@ -44,12 +45,16 @@ fun RegisterScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
 
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    
+    val coroutineScope = rememberCoroutineScope()
+    val socialRepository = remember { com.corecoders.gymbuddy.data.SocialRepository() }
 
     val onRegister = {
-        if (email.isNotEmpty() && password.isNotEmpty() && !isLoading) {
+        if (email.isNotEmpty() && password.isNotEmpty() && username.isNotEmpty() && !isLoading) {
             isLoading = true
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
@@ -59,10 +64,21 @@ fun RegisterScreen(navController: NavController) {
                         }
                         task.result.user?.updateProfile(profileUpdates)
                             ?.addOnCompleteListener {
-                                isLoading = false
-                                Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                                navController.navigate("onboarding") {
-                                    popUpTo("login") { inclusive = true }
+                                coroutineScope.launch {
+                                    val success = socialRepository.createOrUpdateProfile(username, name, "")
+                                    if (success) {
+                                        isLoading = false
+                                        Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                                        navController.navigate("onboarding") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    } else {
+                                        isLoading = false
+                                        Toast.makeText(context, "Account created but username setup failed.", Toast.LENGTH_LONG).show()
+                                        navController.navigate("onboarding") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    }
                                 }
                             }
                     } else {
@@ -104,6 +120,24 @@ fun RegisterScreen(navController: NavController) {
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -163,7 +197,7 @@ fun RegisterScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty(),
+                enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty() && username.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 onClick = onRegister,
                 shape = RoundedCornerShape(16.dp),

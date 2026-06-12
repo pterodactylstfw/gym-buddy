@@ -30,4 +30,10 @@ interface RoutineDao {
 
     @Query("SELECT MAX(`order`) FROM routine_exercises WHERE routineId = :routineId")
     suspend fun getMaxOrderForRoutine(routineId: Int): Int?
+
+    @Query("DELETE FROM routines")
+    suspend fun clearRoutines()
+
+    @Query("DELETE FROM routine_exercises")
+    suspend fun clearRoutineExercises()
 }

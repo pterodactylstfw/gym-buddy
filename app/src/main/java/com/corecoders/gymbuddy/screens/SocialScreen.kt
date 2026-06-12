@@ -1,6 +1,8 @@
 package com.corecoders.gymbuddy.screens
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +14,9 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,35 +25,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-
-data class SocialPost(
-    val userName: String,
-    val userAvatar: String,
-    val workoutName: String,
-    val timeAgo: String,
-    val stats: String,
-    val exercises: List<String>,
-    val claps: Int,
-    val comments: Int
-)
+import com.corecoders.gymbuddy.data.dto.SocialPostDto
+import com.corecoders.gymbuddy.viewmodel.SocialViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SocialScreen(navController: NavController) {
-    val dummyPosts = listOf(
-        SocialPost("Alex Ionescu", "A", "Push Day - Hypertrophy", "2h ago", "12.4k kg • 75 min", listOf("Bench Press", "Incline DB Press", "Tricep Pushdowns"), 24, 5),
-        SocialPost("Maria Popa", "M", "Morning Yoga & Core", "5h ago", "0 kg • 45 min", listOf("Sun Salutation", "Plank Circuit", "Deadbug"), 15, 2),
-        SocialPost("Robert Dan", "R", "Heavy Squat Session", "Yesterday", "18.2k kg • 90 min", listOf("Back Squat", "Leg Press", "Leg Extensions"), 42, 12),
-        SocialPost("Elena Radu", "E", "Quick HIIT Blast", "Yesterday", "500 kg • 20 min", listOf("Burpees", "Mountain Climbers", "Kettlebell Swings"), 18, 3)
-    )
+fun SocialScreen(
+    navController: NavController,
+    viewModel: SocialViewModel = viewModel()
+) {
+    val feedPosts by viewModel.feedPosts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadFeed()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Feed", fontWeight = FontWeight.ExtraBold) },
                 actions = {
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { navController.navigate("find_friends") }) {
                         Icon(Icons.Default.PersonAdd, contentDescription = "Add Friends", tint = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -60,21 +61,42 @@ fun SocialScreen(navController: NavController) {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(dummyPosts) { post ->
-                SocialActivityCard(post)
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-            item { Spacer(modifier = Modifier.height(80.dp)) }
+        } else if (feedPosts.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Group, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.secondary)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No posts yet.", color = MaterialTheme.colorScheme.secondary)
+                    TextButton(onClick = { navController.navigate("find_friends") }) {
+                        Text("Find friends to see their workouts!")
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(feedPosts) { post ->
+                    SocialActivityCard(post, onClapClick = { viewModel.toggleClap(post.postId) })
+                }
+                item { Spacer(modifier = Modifier.height(80.dp)) }
+            }
         }
     }
 }
 
 @Composable
-fun SocialActivityCard(post: SocialPost) {
+fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit) {
+    val timeAgo = DateUtils.getRelativeTimeSpanString(post.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+    val hasClapped = post.clappedBy.contains(currentUserId)
+
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -95,8 +117,8 @@ fun SocialActivityCard(post: SocialPost) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(post.userName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
-                    Text(post.timeAgo, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+                    Text(post.username, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(timeAgo, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
                 }
             }
 
@@ -120,27 +142,28 @@ fun SocialActivityCard(post: SocialPost) {
             Spacer(modifier = Modifier.height(12.dp))
 
             // Exercises snippet
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
-                post.exercises.forEach { exercise ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Check, 
-                            contentDescription = null, 
-                            modifier = Modifier.size(14.dp), 
-                            tint = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(exercise, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (post.exercises.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    post.exercises.forEach { exercise ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.Check, 
+                                contentDescription = null, 
+                                modifier = Modifier.size(14.dp), 
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(exercise, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Interaction Bar
             Row(
@@ -148,11 +171,21 @@ fun SocialActivityCard(post: SocialPost) {
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                InteractionButton(Icons.Default.ThumbUp, "${post.claps}")
+                InteractionButton(
+                    icon = Icons.Default.ThumbUp, 
+                    count = "${post.claps}", 
+                    isActive = hasClapped,
+                    onClick = onClapClick
+                )
                 Spacer(modifier = Modifier.width(24.dp))
-                InteractionButton(Icons.Outlined.ChatBubbleOutline, "${post.comments}")
+                InteractionButton(
+                    icon = Icons.Outlined.ChatBubbleOutline, 
+                    count = "${post.comments}",
+                    isActive = false,
+                    onClick = {} // Not implemented yet
+                )
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { /* TODO */ }) {
+                IconButton(onClick = { /* TODO Share */ }) {
                     Icon(
                         imageVector = Icons.Outlined.Share, 
                         contentDescription = "Share", 
@@ -166,15 +199,21 @@ fun SocialActivityCard(post: SocialPost) {
 }
 
 @Composable
-fun InteractionButton(icon: ImageVector, count: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+fun InteractionButton(icon: ImageVector, count: String, isActive: Boolean, onClick: () -> Unit) {
+    val color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+    Row(
+        verticalAlignment = Alignment.CenterVertically, 
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
         Icon(
             imageVector = icon, 
             contentDescription = null, 
             modifier = Modifier.size(20.dp), 
-            tint = MaterialTheme.colorScheme.secondary
+            tint = color
         )
         Spacer(modifier = Modifier.width(6.dp))
-        Text(count, fontSize = 14.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Medium)
+        Text(count, fontSize = 14.sp, color = color, fontWeight = FontWeight.Medium)
     }
 }

@@ -107,11 +107,11 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
-    fun finishWorkout(onFinished: () -> Unit) {
+    fun finishWorkout(onFinished: (Int?) -> Unit) {
         val completedSets = _activeExercises.value.flatMap { it.sets }.filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
         
         if (completedSets.isEmpty()) {
-            onFinished()
+            onFinished(null)
             return
         }
 
@@ -137,7 +137,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                     }
                 }
             }
-            onFinished()
+            onFinished(workoutId)
         }
     }
 
