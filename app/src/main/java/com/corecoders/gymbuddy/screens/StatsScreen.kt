@@ -23,12 +23,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
+import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
+import com.corecoders.gymbuddy.data.dao.MuscleSetCount
 
 @Composable
-fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel) {
+fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel, profileViewModel: ProfileViewModel) {
     val scrollState = rememberScrollState()
     val workoutsCount by workoutViewModel.workoutsCount.collectAsState()
     val totalVolume by workoutViewModel.totalVolume.collectAsState()
+    val weight by profileViewModel.weight.collectAsState()
+    val bodyFat by profileViewModel.bodyFat.collectAsState()
+    val muscleMass by profileViewModel.muscleMass.collectAsState()
+    val waistSize by profileViewModel.waistSize.collectAsState()
+
+    val weeklyDays by workoutViewModel.weeklyAttendanceDays.collectAsState()
+    val maxWeight by workoutViewModel.maxWeightLifted.collectAsState()
+    val totalDuration by workoutViewModel.totalDurationMinutes.collectAsState()
+    val muscleCounts by workoutViewModel.muscleSetCounts.collectAsState()
+    val trainingFrequency by profileViewModel.trainingFrequency.collectAsState()
+
+    var showBodyCompDialog by remember { mutableStateOf<String?>(null) }
+    var bodyCompInputValue by remember { mutableStateOf("") }
 
     val formattedVolume = if (totalVolume >= 1000) {
         "%.1fK".format(totalVolume / 1000)
@@ -90,10 +105,11 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
                     footer = "Total sessions",
                     modifier = Modifier.weight(1f)
                 )
+                val goal = if (trainingFrequency > 0) trainingFrequency else 4
                 StatCard(
                     title = "WEEKLY GOAL",
-                    value = "1/4",
-                    footer = "3 more to go → 25%",
+                    value = "$weeklyDays/$goal",
+                    footer = "${(goal - weeklyDays).coerceAtLeast(0)} more to go → ${((weeklyDays.toFloat() / goal.toFloat()) * 100).toInt()}%",
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -101,15 +117,21 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StatCard(
                     title = "WEIGHT",
-                    value = "74.7",
+                    value = if (weight > 0f) {
+                        if (weight == weight.toInt().toFloat()) weight.toInt().toString() else weight.toString()
+                    } else "--",
                     unit = "kg",
-                    footer = "↗ +0.6 kg\nLast updated Mar 23",
+                    footer = "From Profile",
                     hasEditIcon = true,
                     modifier = Modifier.weight(1f)
                 )
+                val relStrength = if (weight > 0f && maxWeight > 0f) {
+                    "%.2f".format(maxWeight / weight)
+                } else "--"
+
                 StatCard(
                     title = "RELATIVE STRENGTH",
-                    value = "1.57",
+                    value = relStrength,
                     footer = "times your bodyweight",
                     modifier = Modifier.weight(1f)
                 )
@@ -130,64 +152,81 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                BodyCompCard("BODY FAT")
-                BodyCompCard("MUSCLE")
-                BodyCompCard("WAIST")
+                BodyCompCard("BODY FAT", if (bodyFat.isNotEmpty()) "$bodyFat %" else "Tap to add") {
+                    showBodyCompDialog = "BODY FAT"
+                    bodyCompInputValue = bodyFat
+                }
+                BodyCompCard("MUSCLE", if (muscleMass.isNotEmpty()) "$muscleMass kg" else "Tap to add") {
+                    showBodyCompDialog = "MUSCLE"
+                    bodyCompInputValue = muscleMass
+                }
+                BodyCompCard("WAIST", if (waistSize.isNotEmpty()) "$waistSize cm" else "Tap to add") {
+                    showBodyCompDialog = "WAIST"
+                    bodyCompInputValue = waistSize
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- MUSCLE FOCUS & VOLUME ---
+            // --- MUSCLE FOCUS ---
+            MuscleFocusCard(muscleCounts, modifier = Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- VOLUME & CALORIES ---
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                MuscleFocusCard(modifier = Modifier.weight(1.2f))
                 StatCard(
                     title = "VOLUME",
                     value = formattedVolume,
                     footer = "Total kg lifted",
-                    modifier = Modifier.weight(0.8f)
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "EST. CALORIES",
+                    value = "%,d".format(totalDuration * 6),
+                    footer = "total burned",
+                    modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- AREAS TO FOCUS ---
-            AreasToFocusCard()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // --- HEALTH STATS ---
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(
-                    title = "STEPS",
-                    value = "178.0K",
-                    footer = "this month   ↑ 100%",
-                    footerColor = com.corecoders.gymbuddy.ui.theme.SuccessGreen,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    title = "ACTIVE CAL",
-                    value = "2,963",
-                    footer = "this month",
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard(
-                    title = "HEART RATE",
-                    value = "109",
-                    footer = "bpm",
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    title = "RESTING HR",
-                    value = "53",
-                    footer = "bpm",
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            AreasToFocusCard(muscleCounts)
 
             Spacer(modifier = Modifier.height(80.dp))
+        }
+
+        if (showBodyCompDialog != null) {
+            AlertDialog(
+                onDismissRequest = { showBodyCompDialog = null },
+                title = { Text("Update $showBodyCompDialog") },
+                text = {
+                    OutlinedTextField(
+                        value = bodyCompInputValue,
+                        onValueChange = { bodyCompInputValue = it },
+                        label = { Text("Value") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        when (showBodyCompDialog) {
+                            "BODY FAT" -> profileViewModel.updateBodyComposition(bodyFat = bodyCompInputValue, muscleMass = null, waistSize = null)
+                            "MUSCLE" -> profileViewModel.updateBodyComposition(bodyFat = null, muscleMass = bodyCompInputValue, waistSize = null)
+                            "WAIST" -> profileViewModel.updateBodyComposition(bodyFat = null, muscleMass = null, waistSize = bodyCompInputValue)
+                        }
+                        showBodyCompDialog = null
+                    }) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBodyCompDialog = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
@@ -292,7 +331,7 @@ fun StatCard(
 }
 
 @Composable
-fun BodyCompCard(title: String) {
+fun BodyCompCard(title: String, value: String, onClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -300,6 +339,7 @@ fun BodyCompCard(title: String) {
         modifier = Modifier
             .width(110.dp)
             .height(110.dp)
+            .clickable { onClick() }
     ) {
         Column(
             modifier = Modifier.padding(16.dp).fillMaxSize(),
@@ -313,16 +353,17 @@ fun BodyCompCard(title: String) {
                 letterSpacing = 0.5.sp
             )
             Text(
-                text = "Tap to add",
-                color = MaterialTheme.colorScheme.secondary,
-                fontSize = 14.sp
+                text = value,
+                color = if (value == "Tap to add") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                fontSize = if (value == "Tap to add") 14.sp else 20.sp,
+                fontWeight = if (value == "Tap to add") FontWeight.Normal else FontWeight.Bold
             )
         }
     }
 }
 
 @Composable
-fun MuscleFocusCard(modifier: Modifier = Modifier) {
+fun MuscleFocusCard(muscleCounts: List<MuscleSetCount>, modifier: Modifier = Modifier) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -339,10 +380,14 @@ fun MuscleFocusCard(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            MuscleBar("Chest", "45 sets", 0.8f)
-            MuscleBar("Back", "23 sets", 0.4f)
-            MuscleBar("Arms", "19 sets", 0.3f)
-            MuscleBar("Shoulders", "16 sets", 0.2f)
+            if (muscleCounts.isEmpty()) {
+                Text("Log workouts to see your focus", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+            } else {
+                val totalSets = muscleCounts.sumOf { it.setCount }.toFloat().coerceAtLeast(1f)
+                muscleCounts.take(4).forEach { count ->
+                    MuscleBar(count.bodyPart, "${count.setCount} sets", count.setCount / totalSets)
+                }
+            }
         }
     }
 }
@@ -372,7 +417,7 @@ fun MuscleBar(name: String, sets: String, progress: Float) {
 }
 
 @Composable
-fun AreasToFocusCard() {
+fun AreasToFocusCard(muscleCounts: List<MuscleSetCount>) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -388,9 +433,26 @@ fun AreasToFocusCard() {
                 letterSpacing = 1.sp
             )
             Spacer(modifier = Modifier.height(16.dp))
-            FocusRow("Legs", "Undertrained")
-            Spacer(modifier = Modifier.height(12.dp))
-            FocusRow("Core", "Undertrained")
+
+            val allMuscles = listOf("chest", "back", "legs", "shoulders", "arms", "core")
+            val trainedMuscles = muscleCounts.map { it.bodyPart.lowercase() }
+            val untrained = allMuscles.filter { it !in trainedMuscles }
+            
+            if (untrained.isEmpty() && muscleCounts.size >= 2) {
+                // Toate sunt antrenate, alege cele cu cele mai putine seturi
+                val lowest = muscleCounts.takeLast(2)
+                lowest.forEach { 
+                    FocusRow(it.bodyPart.replaceFirstChar { c -> c.uppercase() }, "Needs more volume") 
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            } else if (untrained.isNotEmpty()) {
+                untrained.take(2).forEach { 
+                    FocusRow(it.replaceFirstChar { c -> c.uppercase() }, "Undertrained") 
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            } else {
+                 Text("Log workouts to identify areas to focus", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+            }
         }
     }
 }

@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     factory = ActiveWorkoutViewModelFactory(database.workoutDao())
                 )
                 val profileViewModel: ProfileViewModel = viewModel(
-                    factory = ProfileViewModelFactory(database.workoutDao(), database.routineDao())
+                    factory = ProfileViewModelFactory(database.workoutDao(), database.routineDao(), userPreferences)
                 )
                 val historyViewModel: HistoryViewModel = viewModel(
                     factory = HistoryViewModelFactory(database.workoutDao())
@@ -62,6 +62,22 @@ class MainActivity : ComponentActivity() {
                 val routinesViewModel: RoutinesViewModel = viewModel(
                     factory = RoutinesViewModelFactory(database.routineDao(), database.exerciseDao())
                 )
+                val onboardingViewModel: OnboardingViewModel = viewModel(
+                    factory = OnboardingViewModelFactory(userPreferences)
+                )
+
+                val onboardingCompleted by userPreferences.onboardingCompletedFlow.collectAsState(initial = null)
+
+                LaunchedEffect(auth.currentUser, onboardingCompleted) {
+                    if (auth.currentUser != null && onboardingCompleted == false) {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute != "onboarding") {
+                            navController.navigate("onboarding") {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }
+                }
 
                 val startDestination = if (auth.currentUser != null) BottomNavItem.Dashboard.route else "login"
 
@@ -94,6 +110,18 @@ class MainActivity : ComponentActivity() {
 
                         composable("register") {
                             RegisterScreen(navController = navController)
+                        }
+
+                        composable("onboarding") {
+                            OnboardingScreen(
+                                navController = navController,
+                                viewModel = onboardingViewModel,
+                                onFinish = {
+                                    navController.navigate(BottomNavItem.Dashboard.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
                         }
 
                         composable(BottomNavItem.Dashboard.route) {
@@ -153,7 +181,7 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(BottomNavItem.Stats.route) {
-                            StatsScreen(navController, workoutViewModel)
+                            StatsScreen(navController, workoutViewModel, profileViewModel)
                         }
 
                         composable(BottomNavItem.Social.route) {
@@ -183,6 +211,12 @@ class MainActivity : ComponentActivity() {
                                 viewModel = activeWorkoutViewModel,
                                 onAddExerciseClick = { navController.navigate(BottomNavItem.Catalog.route) },
                                 onFinishClick = {
+                                    activeWorkoutViewModel.resetWorkout()
+                                    navController.navigate(BottomNavItem.Dashboard.route) {
+                                        popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }
+                                    }
+                                },
+                                onCancelClick = {
                                     activeWorkoutViewModel.resetWorkout()
                                     navController.navigate(BottomNavItem.Dashboard.route) {
                                         popUpTo(BottomNavItem.Dashboard.route) { inclusive = true }

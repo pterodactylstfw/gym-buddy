@@ -61,7 +61,9 @@ fun RegisterScreen(navController: NavController) {
                             ?.addOnCompleteListener {
                                 isLoading = false
                                 Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                                navController.popBackStack()
+                                navController.navigate("onboarding") {
+                                    popUpTo("login") { inclusive = true }
+                                }
                             }
                     } else {
                         isLoading = false

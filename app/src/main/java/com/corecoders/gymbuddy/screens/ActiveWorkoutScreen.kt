@@ -12,6 +12,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,8 +36,10 @@ import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 fun ActiveWorkoutScreen(
     viewModel: ActiveWorkoutViewModel,
     onAddExerciseClick: () -> Unit,
-    onFinishClick: () -> Unit
+    onFinishClick: () -> Unit,
+    onCancelClick: () -> Unit
 ) {
+    var showCancelDialog by remember { mutableStateOf(false) }
     val activeExercises by viewModel.activeExercises.collectAsState()
     val workoutName by viewModel.workoutName.collectAsState()
 
@@ -49,6 +53,11 @@ fun ActiveWorkoutScreen(
                         letterSpacing = 1.sp,
                         color = MaterialTheme.colorScheme.primary
                     ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = { showCancelDialog = true }) {
+                        Icon(Icons.Default.Close, contentDescription = "Cancel Workout", tint = MaterialTheme.colorScheme.onBackground)
+                    }
                 },
                 actions = {
                     TextButton(onClick = {
@@ -110,6 +119,29 @@ fun ActiveWorkoutScreen(
                 Text("ADD EXERCISE", style = MaterialTheme.typography.labelSmall, color = Color.White)
             }
         }
+
+        if (showCancelDialog) {
+            AlertDialog(
+                onDismissRequest = { showCancelDialog = false },
+                title = { Text("Cancel Workout?") },
+                text = { Text("Are you sure you want to cancel? All unsaved progress will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showCancelDialog = false
+                            onCancelClick()
+                        }
+                    ) {
+                        Text("Yes, Cancel", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCancelDialog = false }) {
+                        Text("Keep Working Out")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -133,6 +165,9 @@ fun ExerciseCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = { viewModel.removeExercise(exerciseIndex) }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Exercise", tint = MaterialTheme.colorScheme.error)
+                }
             }
             
             Spacer(modifier = Modifier.height(20.dp))

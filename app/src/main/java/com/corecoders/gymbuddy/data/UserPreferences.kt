@@ -6,6 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -20,56 +23,119 @@ class UserPreferences(private val context: Context) {
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val UNIT_SYSTEM_METRIC = booleanPreferencesKey("unit_system_metric")
         val AUTO_COMPLETE_SET = booleanPreferencesKey("auto_complete_set")
+        
+        // Onboarding / Profile fields
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val AGE = intPreferencesKey("age")
+        val WEIGHT = floatPreferencesKey("weight")
+        val HEIGHT = intPreferencesKey("height")
+        val TARGET_WEIGHT = floatPreferencesKey("target_weight")
+        val TRAINING_FREQUENCY = intPreferencesKey("training_frequency")
+        val FITNESS_GOAL = stringPreferencesKey("fitness_goal")
+        val EXPERIENCE_LEVEL = stringPreferencesKey("experience_level")
+        val GENDER = stringPreferencesKey("gender")
+        val PROFILE_PICTURE_URI = stringPreferencesKey("profile_picture_uri")
+        val BODY_FAT = stringPreferencesKey("body_fat")
+        val MUSCLE_MASS = stringPreferencesKey("muscle_mass")
+        val WAIST_SIZE = stringPreferencesKey("waist_size")
     }
 
-    val darkModeFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
+    private fun <T> getFlow(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
+        return context.dataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }.map { preferences ->
+                preferences[key] ?: defaultValue
             }
-        }.map { preferences ->
-            preferences[PreferencesKeys.DARK_MODE] ?: true
-        }
+    }
 
-    val unitSystemMetricFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }.map { preferences ->
-            preferences[PreferencesKeys.UNIT_SYSTEM_METRIC] ?: true
-        }
+    val darkModeFlow: Flow<Boolean> = getFlow(PreferencesKeys.DARK_MODE, true)
+    val unitSystemMetricFlow: Flow<Boolean> = getFlow(PreferencesKeys.UNIT_SYSTEM_METRIC, true)
+    val autoCompleteSetFlow: Flow<Boolean> = getFlow(PreferencesKeys.AUTO_COMPLETE_SET, true)
+    val onboardingCompletedFlow: Flow<Boolean> = getFlow(PreferencesKeys.ONBOARDING_COMPLETED, false)
 
-    val autoCompleteSetFlow: Flow<Boolean> = context.dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }.map { preferences ->
-            preferences[PreferencesKeys.AUTO_COMPLETE_SET] ?: true
-        }
+    val ageFlow: Flow<Int> = getFlow(PreferencesKeys.AGE, 0)
+    val weightFlow: Flow<Float> = getFlow(PreferencesKeys.WEIGHT, 0f)
+    val heightFlow: Flow<Int> = getFlow(PreferencesKeys.HEIGHT, 0)
+    val targetWeightFlow: Flow<Float> = getFlow(PreferencesKeys.TARGET_WEIGHT, 0f)
+    val trainingFrequencyFlow: Flow<Int> = getFlow(PreferencesKeys.TRAINING_FREQUENCY, 0)
+    val fitnessGoalFlow: Flow<String> = getFlow(PreferencesKeys.FITNESS_GOAL, "")
+    val experienceLevelFlow: Flow<String> = getFlow(PreferencesKeys.EXPERIENCE_LEVEL, "")
+    val genderFlow: Flow<String> = getFlow(PreferencesKeys.GENDER, "")
+    val profilePictureUriFlow: Flow<String> = getFlow(PreferencesKeys.PROFILE_PICTURE_URI, "")
+    val bodyFatFlow: Flow<String> = getFlow(PreferencesKeys.BODY_FAT, "")
+    val muscleMassFlow: Flow<String> = getFlow(PreferencesKeys.MUSCLE_MASS, "")
+    val waistSizeFlow: Flow<String> = getFlow(PreferencesKeys.WAIST_SIZE, "")
 
     suspend fun updateDarkMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.DARK_MODE] = enabled
-        }
+        context.dataStore.edit { it[PreferencesKeys.DARK_MODE] = enabled }
     }
 
     suspend fun updateUnitSystem(metric: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.UNIT_SYSTEM_METRIC] = metric
-        }
+        context.dataStore.edit { it[PreferencesKeys.UNIT_SYSTEM_METRIC] = metric }
     }
 
     suspend fun updateAutoCompleteSet(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.AUTO_COMPLETE_SET] = enabled
+        context.dataStore.edit { it[PreferencesKeys.AUTO_COMPLETE_SET] = enabled }
+    }
+    
+    suspend fun updateOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ONBOARDING_COMPLETED] = completed }
+    }
+
+    suspend fun updateProfilePictureUri(uri: String) {
+        context.dataStore.edit { it[PreferencesKeys.PROFILE_PICTURE_URI] = uri }
+    }
+
+    suspend fun updateBodyComposition(bodyFat: String?, muscleMass: String?, waistSize: String?) {
+        context.dataStore.edit { prefs ->
+            bodyFat?.let { prefs[PreferencesKeys.BODY_FAT] = it }
+            muscleMass?.let { prefs[PreferencesKeys.MUSCLE_MASS] = it }
+            waistSize?.let { prefs[PreferencesKeys.WAIST_SIZE] = it }
+        }
+    }
+
+    suspend fun updateProfileData(
+        age: Int? = null,
+        weight: Float? = null,
+        height: Int? = null,
+        targetWeight: Float? = null,
+        trainingFrequency: Int? = null,
+        fitnessGoal: String? = null,
+        experienceLevel: String? = null,
+        gender: String? = null
+    ) {
+        context.dataStore.edit { prefs ->
+            age?.let { prefs[PreferencesKeys.AGE] = it }
+            weight?.let { prefs[PreferencesKeys.WEIGHT] = it }
+            height?.let { prefs[PreferencesKeys.HEIGHT] = it }
+            targetWeight?.let { prefs[PreferencesKeys.TARGET_WEIGHT] = it }
+            trainingFrequency?.let { prefs[PreferencesKeys.TRAINING_FREQUENCY] = it }
+            fitnessGoal?.let { prefs[PreferencesKeys.FITNESS_GOAL] = it }
+            experienceLevel?.let { prefs[PreferencesKeys.EXPERIENCE_LEVEL] = it }
+            gender?.let { prefs[PreferencesKeys.GENDER] = it }
+        }
+    }
+
+    suspend fun clearProfileData() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(PreferencesKeys.ONBOARDING_COMPLETED)
+            prefs.remove(PreferencesKeys.AGE)
+            prefs.remove(PreferencesKeys.WEIGHT)
+            prefs.remove(PreferencesKeys.HEIGHT)
+            prefs.remove(PreferencesKeys.TARGET_WEIGHT)
+            prefs.remove(PreferencesKeys.TRAINING_FREQUENCY)
+            prefs.remove(PreferencesKeys.FITNESS_GOAL)
+            prefs.remove(PreferencesKeys.EXPERIENCE_LEVEL)
+            prefs.remove(PreferencesKeys.GENDER)
+            prefs.remove(PreferencesKeys.PROFILE_PICTURE_URI)
+            prefs.remove(PreferencesKeys.BODY_FAT)
+            prefs.remove(PreferencesKeys.MUSCLE_MASS)
+            prefs.remove(PreferencesKeys.WAIST_SIZE)
         }
     }
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.corecoders.gymbuddy.data.Workout
 import com.corecoders.gymbuddy.data.dao.WorkoutDao
+import com.corecoders.gymbuddy.data.dao.MuscleSetCount
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -27,6 +28,17 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     val totalVolume: StateFlow<Double> = workoutDao.getTotalVolume()
         .map { it ?: 0.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val maxWeightLifted: StateFlow<Double> = workoutDao.getMaxWeightLifted()
+        .map { it ?: 0.0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val totalDurationMinutes: StateFlow<Int> = workoutDao.getTotalDuration()
+        .map { it ?: 0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val muscleSetCounts: StateFlow<List<MuscleSetCount>> = workoutDao.getMuscleSetCounts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Logica pentru zilele de antrenament din această săptămână
     val weeklyAttendanceDays: StateFlow<Int> = workoutDao.getDistinctWorkoutDaysInRange(getStartOfWeekTimestamp())

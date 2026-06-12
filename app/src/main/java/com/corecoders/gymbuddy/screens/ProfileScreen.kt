@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Settings
@@ -24,6 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
+import java.io.File
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -34,6 +41,8 @@ import com.corecoders.gymbuddy.data.Workout
 import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +53,8 @@ fun ProfileScreen(
     onSignOutSuccess: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val tabs = listOf("Workouts", "Routines", "Progress")
     val user = Firebase.auth.currentUser
     
@@ -51,6 +62,21 @@ fun ProfileScreen(
     val routines by viewModel.allRoutines.collectAsState()
     val totalVolume by viewModel.totalVolume.collectAsState()
     val totalWorkouts by viewModel.totalWorkouts.collectAsState()
+
+    val age by viewModel.age.collectAsState()
+    val weight by viewModel.weight.collectAsState()
+    val experience by viewModel.experienceLevel.collectAsState()
+    val profilePictureUri by viewModel.profilePictureUri.collectAsState()
+
+    var showPhotoMenu by remember { mutableStateOf(false) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                viewModel.saveProfilePicture(context, uri)
+            }
+        }
+    )
 
     Scaffold(
         topBar = {
@@ -60,11 +86,14 @@ fun ProfileScreen(
                     IconButton(onClick = { /* TODO: Share */ }) {
                         Icon(Icons.Outlined.IosShare, contentDescription = "Share", tint = MaterialTheme.colorScheme.onBackground)
                     }
-                    IconButton(onClick = { /* TODO: Edit */ }) {
+                    IconButton(onClick = { navController.navigate("onboarding") }) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onBackground)
                     }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onBackground)
+                    }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Delete Account", tint = MaterialTheme.colorScheme.error)
                     }
                     IconButton(onClick = {
                         viewModel.signOut()
@@ -87,7 +116,20 @@ fun ProfileScreen(
                 .padding(padding)
         ) {
             // --- HEADER PROFIL ---
-            ProfileHeader(user?.displayName ?: "User", totalWorkouts, routines.size)
+            val experienceStr = experience.takeIf { it.isNotEmpty() } ?: "Athlete"
+            val ageStr = if (age > 0) "$age yrs" else ""
+            val weightStr = if (weight > 0f) "${weight.toInt()} kg" else ""
+            val subtitleParts = listOf(experienceStr, ageStr, weightStr).filter { it.isNotEmpty() }
+            val subtitle = if (subtitleParts.isNotEmpty()) subtitleParts.joinToString(" • ") else "Welcome to GymBuddy!"
+
+            ProfileHeader(
+                displayName = user?.displayName ?: "User", 
+                subtitle = subtitle, 
+                workoutCount = totalWorkouts, 
+                routineCount = routines.size,
+                profilePictureUri = profilePictureUri,
+                onPhotoClick = { showPhotoMenu = true }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -130,28 +172,111 @@ fun ProfileScreen(
                 }
             }
         }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Account") },
+                text = { Text("Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            viewModel.deleteAccount(
+                                onSuccess = {
+                                    Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
+                                    onSignOutSuccess()
+                                },
+                                onError = { error ->
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showPhotoMenu) {
+            ModalBottomSheet(
+                onDismissRequest = { showPhotoMenu = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Profile Photo",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+                    ListItem(
+                        headlineContent = { Text("Choose from Library") },
+                        modifier = Modifier.clickable {
+                            showPhotoMenu = false
+                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
+                    )
+                    if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                        ListItem(
+                            headlineContent = { Text("Remove Photo", color = MaterialTheme.colorScheme.error) },
+                            modifier = Modifier.clickable {
+                                showPhotoMenu = false
+                                viewModel.removeProfilePicture()
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun ProfileHeader(displayName: String, workoutCount: Int, routineCount: Int) {
+fun ProfileHeader(
+    displayName: String, 
+    subtitle: String, 
+    workoutCount: Int, 
+    routineCount: Int,
+    profilePictureUri: String,
+    onPhotoClick: () -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Poza de profil (Placeholder)
+            // Poza de profil
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
-                    .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                    .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    .clickable { onPhotoClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = displayName.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Black
-                )
+                if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                    AsyncImage(
+                        model = File(profilePictureUri),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = displayName.take(1).uppercase(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(20.dp))
@@ -176,7 +301,7 @@ fun ProfileHeader(displayName: String, workoutCount: Int, routineCount: Int) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Performance Athlete • gym-buddy",
+            text = subtitle,
             color = MaterialTheme.colorScheme.secondary,
             style = MaterialTheme.typography.bodyLarge,
             fontSize = 13.sp

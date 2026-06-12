@@ -8,6 +8,11 @@ import com.corecoders.gymbuddy.data.Workout
 import com.corecoders.gymbuddy.data.WorkoutSet
 import kotlinx.coroutines.flow.Flow
 
+data class MuscleSetCount(
+    val bodyPart: String,
+    val setCount: Int
+)
+
 @Dao
 interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -32,4 +37,19 @@ interface WorkoutDao {
     @Query("SELECT SUM(weight * reps) FROM workout_sets WHERE isCompleted = 1")
     fun getTotalVolume(): Flow<Double?>
 
+    @Query("SELECT MAX(weight) FROM workout_sets WHERE isCompleted = 1")
+    fun getMaxWeightLifted(): Flow<Double?>
+
+    @Query("SELECT SUM(durationMinutes) FROM workouts")
+    fun getTotalDuration(): Flow<Int?>
+
+    @Query("""
+        SELECT e.bodyPart, COUNT(ws.id) as setCount
+        FROM workout_sets ws
+        INNER JOIN exercises e ON ws.exerciseId = e.id
+        WHERE ws.isCompleted = 1
+        GROUP BY e.bodyPart
+        ORDER BY setCount DESC
+    """)
+    fun getMuscleSetCounts(): Flow<List<MuscleSetCount>>
 }
