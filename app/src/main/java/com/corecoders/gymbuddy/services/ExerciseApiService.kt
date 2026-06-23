@@ -63,7 +63,8 @@ interface ExerciseApiService {
     // 4. Lista completă / Filtrare după nume sau keywords
     @GET("api/v1/exercises")
     suspend fun getAllExercises(
-        @Query("limit") limit: Int = 1000 // Tragem tot dintr-o mișcare!
+        @Query("limit") limit: Int = 1000,
+        @Query("cursor") cursor: String? = null
     ): ExerciseApiResponse
 
     // 5. Lista tuturor mușchilor

@@ -10,7 +10,7 @@ import com.corecoders.gymbuddy.data.dao.WorkoutDao
 
 @Database(
     entities = [Workout::class, WorkoutSet::class, Exercise::class, Routine::class, RoutineExercise::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase: RoomDatabase() {
@@ -23,6 +23,13 @@ abstract class AppDatabase: RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workouts ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE routines ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -30,6 +37,7 @@ abstract class AppDatabase: RoomDatabase() {
                     AppDatabase::class.java,
                     "gymbuddy_database"
                 )
+                    .addMigrations(MIGRATION_4_5)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { INSTANCE = it }

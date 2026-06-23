@@ -435,8 +435,15 @@ fun AreasToFocusCard(muscleCounts: List<MuscleSetCount>) {
             Spacer(modifier = Modifier.height(16.dp))
 
             val allMuscles = listOf("chest", "back", "legs", "shoulders", "arms", "core")
-            val trainedMuscles = muscleCounts.map { it.bodyPart.lowercase() }
-            val untrained = allMuscles.filter { it !in trainedMuscles }
+            val trainedCategories = muscleCounts.map { it.bodyPart.lowercase() }.map { muscle ->
+                when {
+                    muscle.contains("arm") -> "arms"
+                    muscle.contains("waist") || muscle.contains("core") || muscle.contains("abs") -> "core"
+                    muscle.contains("leg") || muscle.contains("calv") || muscle.contains("glute") || muscle.contains("thigh") -> "legs"
+                    else -> muscle
+                }
+            }
+            val untrained = allMuscles.filter { it !in trainedCategories }
             
             if (untrained.isEmpty() && muscleCounts.size >= 2) {
                 // Toate sunt antrenate, alege cele cu cele mai putine seturi

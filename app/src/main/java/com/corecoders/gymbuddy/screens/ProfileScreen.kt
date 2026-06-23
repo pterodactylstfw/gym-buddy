@@ -333,6 +333,16 @@ fun WorkoutsTabContent(workouts: List<Workout>, navController: NavController) {
                     onClick = { navController.navigate("workout_details/${workout.id}") }
                 )
             }
+            if (workouts.size > 10) {
+                item {
+                    TextButton(
+                        onClick = { navController.navigate("history") },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        Text("See All History", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }

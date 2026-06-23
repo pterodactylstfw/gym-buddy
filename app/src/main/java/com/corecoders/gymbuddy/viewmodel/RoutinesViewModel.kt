@@ -10,18 +10,22 @@ import com.corecoders.gymbuddy.data.dao.ExerciseDao
 import com.corecoders.gymbuddy.data.dao.RoutineDao
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.google.firebase.auth.FirebaseAuth
+import com.corecoders.gymbuddy.data.AuthManager
 
 class RoutinesViewModel(
     private val routineDao: RoutineDao,
     private val exerciseDao: ExerciseDao
 ) : ViewModel() {
 
-    val allRoutines: StateFlow<List<Routine>> = routineDao.getAllRoutines()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allRoutines: StateFlow<List<Routine>> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        routineDao.getAllRoutines(userId)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun createRoutine(name: String, description: String = "") {
         viewModelScope.launch {
-            routineDao.insertRoutine(Routine(name = name, description = description))
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            routineDao.insertRoutine(Routine(userId = currentUserId, name = name, description = description))
         }
     }
 

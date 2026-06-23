@@ -143,8 +143,20 @@ fun ExerciseItem(exercise: Exercise, onClick: (Exercise) -> Unit) {
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val displayCategory = if (exercise.targetMuscle != "Unknown") {
+                    if (exercise.bodyPart != "Unknown" && exercise.bodyPart != exercise.targetMuscle) {
+                        "${exercise.bodyPart} • ${exercise.targetMuscle}"
+                    } else {
+                        exercise.targetMuscle
+                    }
+                } else if (exercise.bodyPart != "Unknown") {
+                    exercise.bodyPart
+                } else {
+                    "Full Body"
+                }
+
                 Text(
-                    exercise.targetMuscle,
+                    displayCategory,
                     color = MaterialTheme.colorScheme.secondary,
                     style = MaterialTheme.typography.bodyMedium
                 )

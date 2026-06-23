@@ -116,9 +116,10 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         }
 
         viewModelScope.launch {
+            val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
             val finalName = if (_workoutName.value.isBlank()) "Workout" else _workoutName.value
             val durationMinutes = ((System.currentTimeMillis() - startTime) / 60000).toInt()
-            val newWorkout = Workout(name = finalName, durationMinutes = durationMinutes)
+            val newWorkout = Workout(userId = userId, name = finalName, durationMinutes = durationMinutes)
             val workoutId = workoutDao.insertWorkout(newWorkout).toInt()
 
             _activeExercises.value.forEach { activeExercise ->

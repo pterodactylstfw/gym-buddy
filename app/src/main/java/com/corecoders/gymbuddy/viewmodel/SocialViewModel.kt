@@ -25,8 +25,18 @@ class SocialViewModel : ViewModel() {
     val currentUserProfile = _currentUserProfile.asStateFlow()
 
     init {
-        loadFeed()
-        loadCurrentUserProfile()
+        viewModelScope.launch {
+            com.corecoders.gymbuddy.data.AuthManager.currentUserIdFlow().collect { uid ->
+                if (uid.isNotEmpty()) {
+                    loadCurrentUserProfile()
+                    loadFeed()
+                } else {
+                    _currentUserProfile.value = null
+                    _feedPosts.value = emptyList()
+                    _searchResults.value = emptyList()
+                }
+            }
+        }
     }
 
     fun loadFeed() {
@@ -46,7 +56,10 @@ class SocialViewModel : ViewModel() {
         }
     }
 
+    private var currentSearchQuery: String = ""
+
     fun searchUsers(query: String) {
+        currentSearchQuery = query
         if (query.isBlank()) {
             _searchResults.value = emptyList()
             return
@@ -64,6 +77,9 @@ class SocialViewModel : ViewModel() {
             if (success) {
                 loadCurrentUserProfile()
                 loadFeed() // feed might change if we added a friend
+                if (currentSearchQuery.isNotBlank()) {
+                    searchUsers(currentSearchQuery)
+                }
             }
         }
     }
@@ -74,6 +90,9 @@ class SocialViewModel : ViewModel() {
             if (success) {
                 loadCurrentUserProfile()
                 loadFeed()
+                if (currentSearchQuery.isNotBlank()) {
+                    searchUsers(currentSearchQuery)
+                }
             }
         }
     }

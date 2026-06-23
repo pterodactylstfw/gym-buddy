@@ -77,6 +77,8 @@ class SocialRepository {
     
     suspend fun addFriend(friendId: String): Boolean {
         val currentUserId = getCurrentUserId() ?: return false
+        if (currentUserId == friendId) return false
+        
         return try {
             val docRef = firestore.collection("users").document(currentUserId)
             val doc = docRef.get().await()
@@ -87,6 +89,19 @@ class SocialRepository {
                 updatedFriends.add(friendId)
                 docRef.update("friends", updatedFriends).await()
             }
+            
+            // Make friendship mutual
+            val friendDocRef = firestore.collection("users").document(friendId)
+            val friendDoc = friendDocRef.get().await()
+            val friendProfile = friendDoc.toObject(UserProfile::class.java)
+            if (friendProfile != null) {
+                val friendUpdatedFriends = friendProfile.friends.toMutableList()
+                if (!friendUpdatedFriends.contains(currentUserId)) {
+                    friendUpdatedFriends.add(currentUserId)
+                    friendDocRef.update("friends", friendUpdatedFriends).await()
+                }
+            }
+            
             true
         } catch (e: Exception) {
             false
@@ -105,6 +120,19 @@ class SocialRepository {
                  updatedFriends.remove(friendId)
                  docRef.update("friends", updatedFriends).await()
              }
+             
+             // Mutually remove friend
+             val friendDocRef = firestore.collection("users").document(friendId)
+             val friendDoc = friendDocRef.get().await()
+             val friendProfile = friendDoc.toObject(UserProfile::class.java)
+             if (friendProfile != null) {
+                 val friendUpdatedFriends = friendProfile.friends.toMutableList()
+                 if (friendUpdatedFriends.contains(currentUserId)) {
+                     friendUpdatedFriends.remove(currentUserId)
+                     friendDocRef.update("friends", friendUpdatedFriends).await()
+                 }
+             }
+             
              true
          } catch (e: Exception) {
              false

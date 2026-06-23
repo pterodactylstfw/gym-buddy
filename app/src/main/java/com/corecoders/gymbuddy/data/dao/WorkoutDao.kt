@@ -21,8 +21,8 @@ interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSet(workoutSet: WorkoutSet)
 
-    @Query("SELECT * FROM workouts ORDER BY date DESC")
-    fun getAllWorkouts(): Flow<List<Workout>>
+    @Query("SELECT * FROM workouts WHERE userId = :userId ORDER BY date DESC")
+    fun getAllWorkouts(userId: String): Flow<List<Workout>>
 
     @Query("SELECT * FROM workout_sets WHERE workoutId = :workoutId")
     fun getSetsforWorkout(workoutId: Int): Flow<List<WorkoutSet>>
@@ -34,27 +34,30 @@ interface WorkoutDao {
     suspend fun getSetsForWorkoutSync(workoutId: Int): List<WorkoutSet>
 
     // În WorkoutDao.kt
-    @Query("SELECT COUNT(*) FROM workouts")
-    fun getWorkoutsCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM workouts WHERE userId = :userId")
+    fun getWorkoutsCount(userId: String): Flow<Int>
 
-    @Query("SELECT COUNT(DISTINCT (date / 86400000)) FROM workouts WHERE date >= :startOfWeek")
-    fun getDistinctWorkoutDaysInRange(startOfWeek: Long): Flow<Int>
+    @Query("SELECT COUNT(DISTINCT (date / 86400000)) FROM workouts WHERE date >= :startOfWeek AND userId = :userId")
+    fun getDistinctWorkoutDaysInRange(startOfWeek: Long, userId: String): Flow<Int>
 
-    @Query("SELECT SUM(weight * reps) FROM workout_sets WHERE isCompleted = 1")
-    fun getTotalVolume(): Flow<Double?>
+    @Query("SELECT SUM(ws.weight * ws.reps) FROM workout_sets ws INNER JOIN workouts w ON ws.workoutId = w.id WHERE ws.isCompleted = 1 AND w.userId = :userId")
+    fun getTotalVolume(userId: String): Flow<Double?>
 
-    @Query("SELECT MAX(weight) FROM workout_sets WHERE isCompleted = 1")
-    fun getMaxWeightLifted(): Flow<Double?>
+    @Query("SELECT MAX(ws.weight) FROM workout_sets ws INNER JOIN workouts w ON ws.workoutId = w.id WHERE ws.isCompleted = 1 AND w.userId = :userId")
+    fun getMaxWeightLifted(userId: String): Flow<Double?>
 
-    @Query("SELECT SUM(durationMinutes) FROM workouts")
-    fun getTotalDuration(): Flow<Int?>
+    @Query("SELECT SUM(durationMinutes) FROM workouts WHERE userId = :userId")
+    fun getTotalDuration(userId: String): Flow<Int?>
 
-    @Query("SELECT e.bodyPart, COUNT(ws.id) as setCount FROM workout_sets ws INNER JOIN exercises e ON ws.exerciseId = e.id WHERE ws.isCompleted = 1 GROUP BY e.bodyPart ORDER BY setCount DESC")
-    fun getMuscleSetCounts(): Flow<List<MuscleSetCount>>
+    @Query("SELECT e.bodyPart, COUNT(ws.id) as setCount FROM workout_sets ws INNER JOIN exercises e ON ws.exerciseId = e.id INNER JOIN workouts w ON ws.workoutId = w.id WHERE ws.isCompleted = 1 AND w.userId = :userId GROUP BY e.bodyPart ORDER BY setCount DESC")
+    fun getMuscleSetCounts(userId: String): Flow<List<MuscleSetCount>>
 
     @Query("DELETE FROM workouts")
     suspend fun clearWorkouts()
 
     @Query("DELETE FROM workout_sets")
     suspend fun clearWorkoutSets()
+    
+    @Query("UPDATE workouts SET userId = :newUserId WHERE userId = ''")
+    suspend fun assignOrphanWorkouts(newUserId: String)
 }
