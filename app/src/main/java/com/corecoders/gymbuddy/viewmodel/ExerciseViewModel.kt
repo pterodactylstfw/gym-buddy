@@ -34,10 +34,22 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
 
         // Filtrare după categorie (dacă e selectat ceva diferit de "All")
         if (!category.isNullOrBlank() && category != "All") {
-            filtered = filtered.filter { 
-                it.bodyPart.contains(category, ignoreCase = true) || 
-                it.targetMuscle.contains(category, ignoreCase = true) ||
-                it.name.contains(category, ignoreCase = true)
+            filtered = filtered.filter { exercise ->
+                val searchStr = category.lowercase()
+                val bodyPart = exercise.bodyPart.lowercase()
+                val target = exercise.targetMuscle.lowercase()
+                val name = exercise.name.lowercase()
+
+                when (searchStr) {
+                    "core" -> bodyPart.contains("waist") || bodyPart.contains("core") || name.contains("abs") || target.contains("abs") || name.contains("crunch") || name.contains("plank")
+                    "arms" -> bodyPart.contains("arm") || name.contains("curl") || name.contains("tricep") || name.contains("bicep")
+                    "legs" -> bodyPart.contains("leg") || bodyPart.contains("calv") || bodyPart.contains("thigh") || bodyPart.contains("glute") || name.contains("squat") || name.contains("lunge") || target.contains("quad") || target.contains("hamstring")
+                    "chest" -> bodyPart.contains("chest") || target.contains("pectoral") || name.contains("press") || name.contains("fly") || name.contains("push-up")
+                    "back" -> bodyPart.contains("back") || target.contains("lat") || target.contains("spine") || name.contains("row") || name.contains("pull")
+                    "shoulders" -> bodyPart.contains("shoulder") || target.contains("deltoid") || name.contains("raise")
+                    "cardio" -> bodyPart.contains("cardio") || name.contains("run") || name.contains("jump") || name.contains("step")
+                    else -> bodyPart.contains(searchStr) || target.contains(searchStr) || name.contains(searchStr)
+                }
             }
         }
 
@@ -59,16 +71,21 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     private fun syncExercisesFromApi() {
         viewModelScope.launch {
             try {
-                // Verificăm dacă avem deja date ca să nu mai așteptăm degeaba
+                // Verificăm dacă avem deja baza de date completă (inclusiv Bench Press care lipsește din primele 200)
+                val benchPress = exerciseDao.getExerciseNameById("exr_41n2hxnFMotsXTj3")
                 val existing = exerciseDao.getAllExercises().first()
-                if (existing.size > 50) {
-                    println("====== Avem deja ${existing.size} exerciții în baza de date. Sărim descărcarea! ======")
+                if (existing.size > 50 && benchPress != null) {
+                    println("====== Avem deja baza de date completă. Sărim descărcarea! ======")
                     return@launch
                 }
 
-                println("====== Începem descărcarea pe bucăți (Hack pentru limitarea API-ului)... ======")
+                println("====== Începem descărcarea pe bucăți (Hack pentru a ocoli limitarea API-ului)... ======")
 
-                // Tipurile principale de mușchi/părți pentru a face căutări țintite
+                // Ștergem ce s-a descărcat greșit tura trecută
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    exerciseDao.clearExercises()
+                }
+
                 val searchQueries = listOf("CHEST", "BACK", "UPPER ARMS", "LOWER ARMS", "SHOULDERS", "LEGS", "CALVES", "WAIST", "CARDIO")
                 val allDownloadedExercises = mutableListOf<Exercise>()
 
@@ -82,13 +99,19 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
                             val response = ApiClient.exerciseApi.searchExercises(query = query, limit = 50)
 
                             val mapped = response.data.map { dto ->
+                                // Mapăm query-ul într-o categorie clară pentru UI
+                                val mappedBodyPart = when (query) {
+                                    "UPPER ARMS", "LOWER ARMS" -> "Arms"
+                                    "CALVES" -> "Legs"
+                                    "WAIST" -> "Core"
+                                    else -> query.lowercase().replaceFirstChar { it.uppercase() }
+                                }
+
                                 Exercise(
                                     id = dto.exerciseId,
                                     name = dto.name.trim().replaceFirstChar { it.uppercase() },
-                                    targetMuscle = dto.targetMuscles?.firstOrNull()?.replaceFirstChar { it.uppercase() } ?: "Unknown",
-                                    bodyPart = dto.bodyParts?.joinToString(", ") { p ->
-                                        p.lowercase().replaceFirstChar { it.uppercase() }
-                                    } ?: "Unknown",
+                                    targetMuscle = "Unknown", // Nu e returnat de search, dar UI-ul îl ignoră acum
+                                    bodyPart = mappedBodyPart,
                                     gifUrl = dto.imageUrl
                                 )
                             }
@@ -96,20 +119,21 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
                             allDownloadedExercises.addAll(mapped)
                             success = true
 
-                            // PAUZĂ VITALĂ DE 1.5 SECUNDE! Fără ea, API-ul blochează emulatorul și dă UnknownHostException.
-                            delay(1500)
+                            delay(1500) // Pauză VITALĂ pentru limitările API-ului gratuit
 
                         } catch (e: Exception) {
                             retries++
                             println("Eroare la $query. Reîncercăm...")
-                            delay(2000) // Pauză mai lungă dacă a crăpat
+                            delay(2000)
                         }
                     }
                 }
 
                 if (allDownloadedExercises.isNotEmpty()) {
                     val distinctExercises = allDownloadedExercises.distinctBy { it.id }
-                    exerciseDao.insertExercises(distinctExercises)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        exerciseDao.insertExercises(distinctExercises)
+                    }
                     println("====== HACK REUȘIT! Am adunat și salvat ${distinctExercises.size} exerciții în Room! ======")
                 }
 

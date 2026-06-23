@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class Routine(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+    val userId: String = "",
     val name: String,
     val description: String = "",
     val lastPerformed: Long? = null,

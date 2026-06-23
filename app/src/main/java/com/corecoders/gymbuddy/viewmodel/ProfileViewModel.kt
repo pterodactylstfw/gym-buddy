@@ -13,22 +13,38 @@ import com.corecoders.gymbuddy.data.UserPreferences
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import com.corecoders.gymbuddy.data.AuthManager
 
 class ProfileViewModel(
+    private val database: com.corecoders.gymbuddy.data.AppDatabase,
     private val workoutDao: WorkoutDao,
     private val routineDao: RoutineDao,
     private val userPreferences: UserPreferences
 ): ViewModel() {
     private val auth = FirebaseAuth.getInstance()
+    private val currentUserId = auth.currentUser?.uid ?: ""
+
+    init {
+        viewModelScope.launch {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                if (currentUserId.isNotEmpty()) {
+                    workoutDao.assignOrphanWorkouts(currentUserId)
+                    routineDao.assignOrphanRoutines(currentUserId)
+                }
+            }
+        }
+    }
 
     val userEmail: String = auth.currentUser?.email ?: "Unknown User"
 
-    val allWorkouts: StateFlow<List<Workout>> = workoutDao.getAllWorkouts()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val allWorkouts: StateFlow<List<Workout>> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        workoutDao.getAllWorkouts(userId)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val totalWorkouts: StateFlow<Int> = allWorkouts
         .map { it.size }
@@ -38,20 +54,21 @@ class ProfileViewModel(
             initialValue = 0
         )
 
-    val allRoutines: StateFlow<List<Routine>> = routineDao.getAllRoutines()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+    val allRoutines: StateFlow<List<Routine>> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        routineDao.getAllRoutines(userId)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    val totalVolume: StateFlow<Double> = workoutDao.getTotalVolume()
-        .map { it ?: 0.0 }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0.0
-        )
+    val totalVolume: StateFlow<Double> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        workoutDao.getTotalVolume(userId).map { it ?: 0.0 }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0.0
+    )
 
     val age = userPreferences.ageFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
     val weight = userPreferences.weightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0f)
@@ -94,8 +111,8 @@ class ProfileViewModel(
 
     fun signOut() {
         viewModelScope.launch {
-            userPreferences.clearProfileData()
             auth.signOut()
+            userPreferences.clearProfileData()
         }
     }
 
@@ -106,6 +123,12 @@ class ProfileViewModel(
                 if (task.isSuccessful) {
                     viewModelScope.launch {
                         userPreferences.clearProfileData()
+                        kotlinx.coroutines.withContext(Dispatchers.IO) {
+                            workoutDao.clearWorkouts()
+                            workoutDao.clearWorkoutSets()
+                            routineDao.clearRoutines()
+                            routineDao.clearRoutineExercises()
+                        }
                         onSuccess()
                     }
                 } else {
@@ -119,6 +142,7 @@ class ProfileViewModel(
 }
 
 class ProfileViewModelFactory(
+    private val database: com.corecoders.gymbuddy.data.AppDatabase,
     private val workoutDao: WorkoutDao,
     private val routineDao: RoutineDao,
     private val userPreferences: UserPreferences
@@ -126,7 +150,7 @@ class ProfileViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if(modelClass.isAssignableFrom(ProfileViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ProfileViewModel(workoutDao, routineDao, userPreferences) as T
+            return ProfileViewModel(database, workoutDao, routineDao, userPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RoutineDao {
-    @Query("SELECT * FROM routines ORDER BY createdAt DESC")
-    fun getAllRoutines(): Flow<List<Routine>>
+    @Query("SELECT * FROM routines WHERE userId = :userId ORDER BY createdAt DESC")
+    fun getAllRoutines(userId: String): Flow<List<Routine>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoutine(routine: Routine): Long
@@ -30,4 +30,13 @@ interface RoutineDao {
 
     @Query("SELECT MAX(`order`) FROM routine_exercises WHERE routineId = :routineId")
     suspend fun getMaxOrderForRoutine(routineId: Int): Int?
+
+    @Query("DELETE FROM routines")
+    suspend fun clearRoutines()
+
+    @Query("DELETE FROM routine_exercises")
+    suspend fun clearRoutineExercises()
+    
+    @Query("UPDATE routines SET userId = :newUserId WHERE userId = ''")
+    suspend fun assignOrphanRoutines(newUserId: String)
 }

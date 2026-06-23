@@ -107,18 +107,19 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = currentList
     }
 
-    fun finishWorkout(onFinished: () -> Unit) {
+    fun finishWorkout(onFinished: (Int?) -> Unit) {
         val completedSets = _activeExercises.value.flatMap { it.sets }.filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
         
         if (completedSets.isEmpty()) {
-            onFinished()
+            onFinished(null)
             return
         }
 
         viewModelScope.launch {
+            val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
             val finalName = if (_workoutName.value.isBlank()) "Workout" else _workoutName.value
             val durationMinutes = ((System.currentTimeMillis() - startTime) / 60000).toInt()
-            val newWorkout = Workout(name = finalName, durationMinutes = durationMinutes)
+            val newWorkout = Workout(userId = userId, name = finalName, durationMinutes = durationMinutes)
             val workoutId = workoutDao.insertWorkout(newWorkout).toInt()
 
             _activeExercises.value.forEach { activeExercise ->
@@ -137,7 +138,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                     }
                 }
             }
-            onFinished()
+            onFinished(workoutId)
         }
     }
 

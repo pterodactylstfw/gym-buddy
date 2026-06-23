@@ -42,6 +42,7 @@ import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import androidx.compose.ui.res.stringResource
+import com.corecoders.gymbuddy.navigation.BottomNavItem
 
 @Composable
 fun SocialLoginButton(
@@ -73,7 +74,10 @@ fun SocialLoginButton(
 }
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(
+    navController: NavController,
+    onLoginSuccess: () -> Unit = {}
+) {
     val auth: FirebaseAuth = Firebase.auth
     val context = LocalContext.current
     val activity = context as? Activity
@@ -162,7 +166,18 @@ fun LoginScreen(navController: NavController) {
             Button(
                 enabled = !isLoading && email.isNotEmpty() && password.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().height(54.dp),
-                onClick = { /* login logic */ },
+                onClick = {
+                    isLoading = true
+                    auth.signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                onLoginSuccess()
+                            } else {
+                                Toast.makeText(context, task.exception?.localizedMessage ?: "Login failed", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
