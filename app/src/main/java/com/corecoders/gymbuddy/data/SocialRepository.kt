@@ -561,4 +561,50 @@ class SocialRepository {
             listener.remove()
         }
     }
+
+    suspend fun deleteUserData(userId: String): Boolean {
+        return try {
+            val batch = firestore.batch()
+
+            // 1. Delete user profile document
+            val userRef = firestore.collection("users").document(userId)
+            batch.delete(userRef)
+
+            // 2. Delete posts published by the user
+            val postsResult = firestore.collection("posts")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            for (doc in postsResult.documents) {
+                batch.delete(doc.reference)
+            }
+
+            // 3. Remove user ID from any other user's "friends" array
+            val friendsResult = firestore.collection("users")
+                .whereArrayContains("friends", userId)
+                .get()
+                .await()
+            for (doc in friendsResult.documents) {
+                val friendsList = doc.get("friends") as? List<*> ?: emptyList<Any>()
+                val updatedFriends = friendsList.filter { it != userId }
+                batch.update(doc.reference, "friends", updatedFriends)
+            }
+
+            // 4. Delete notifications under users/{userId}/notifications
+            val notificationsResult = firestore.collection("users")
+                .document(userId)
+                .collection("notifications")
+                .get()
+                .await()
+            for (doc in notificationsResult.documents) {
+                batch.delete(doc.reference)
+            }
+
+            batch.commit().await()
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error deleting user data from Firestore", e)
+            false
+        }
+    }
 }

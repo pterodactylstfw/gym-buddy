@@ -103,6 +103,8 @@ class ProfileViewModel(
         // Handled automatically via Firestore snapshot flow
     }
 
+    val unitSystemMetric = userPreferences.unitSystemMetricFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val age = userPreferences.ageFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
     val weight = userPreferences.weightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0f)
     val height = userPreferences.heightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
@@ -222,20 +224,30 @@ class ProfileViewModel(
     fun deleteAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val user = auth.currentUser
         if (user != null) {
-            user.delete().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    viewModelScope.launch {
-                        userPreferences.clearProfileData()
-                        kotlinx.coroutines.withContext(Dispatchers.IO) {
-                            workoutDao.clearWorkouts()
-                            workoutDao.clearWorkoutSets()
-                            routineDao.clearRoutines()
-                            routineDao.clearRoutineExercises()
+            val userId = user.uid
+            viewModelScope.launch {
+                try {
+                    val repository = com.corecoders.gymbuddy.data.SocialRepository()
+                    repository.deleteUserData(userId)
+                    
+                    user.delete().addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            viewModelScope.launch {
+                                userPreferences.clearProfileData()
+                                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                                    workoutDao.clearWorkouts()
+                                    workoutDao.clearWorkoutSets()
+                                    routineDao.clearRoutines()
+                                    routineDao.clearRoutineExercises()
+                                }
+                                onSuccess()
+                            }
+                        } else {
+                            onError(task.exception?.localizedMessage ?: "Failed to delete account.")
                         }
-                        onSuccess()
                     }
-                } else {
-                    onError(task.exception?.localizedMessage ?: "Failed to delete account.")
+                } catch (e: Exception) {
+                    onError(e.localizedMessage ?: "Failed to clean up Firestore database.")
                 }
             }
         } else {

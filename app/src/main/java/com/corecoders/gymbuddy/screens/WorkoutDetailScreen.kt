@@ -16,11 +16,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.corecoders.gymbuddy.data.AppDatabase
+import com.corecoders.gymbuddy.data.UserPreferences
+import androidx.compose.ui.platform.LocalContext
 import com.corecoders.gymbuddy.ui.theme.SuccessGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val userPreferences = remember { UserPreferences(context.applicationContext) }
+    val isMetric by userPreferences.unitSystemMetricFlow.collectAsState(initial = true)
+
     val sets by database.workoutDao().getSetsforWorkout(workoutId).collectAsState(initial = emptyList())
     val groupedSets = sets.groupBy { it.exerciseId }
 
@@ -71,7 +77,7 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
                             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp, start = 8.dp, end = 8.dp)) {
                                 Text("SET", modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.weight(1f))
-                                Text("KG", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isMetric) "KG" else "LBS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Text("REPS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(24.dp))
                             }
@@ -87,7 +93,9 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
                                 ) {
                                     Text("${set.setNumber}", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp), color = MaterialTheme.colorScheme.onSurface)
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Text("${set.weight}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.onSurface)
+                                    val displayW = if (isMetric) set.weight else set.weight * 2.20462
+                                    val weightStr = if (displayW % 1 == 0.0) displayW.toInt().toString() else "%.1f".format(displayW)
+                                    Text(weightStr, fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.onSurface)
                                     Text("${set.reps}", fontWeight = FontWeight.Bold, modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.onSurface)
 
                                     Icon(

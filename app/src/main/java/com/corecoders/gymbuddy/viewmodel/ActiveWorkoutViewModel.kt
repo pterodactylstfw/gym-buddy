@@ -7,8 +7,11 @@ import com.corecoders.gymbuddy.data.Exercise
 import com.corecoders.gymbuddy.data.Workout
 import com.corecoders.gymbuddy.data.dao.WorkoutDao
 import com.corecoders.gymbuddy.data.WorkoutSet
+import com.corecoders.gymbuddy.data.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.UUID
@@ -26,7 +29,16 @@ data class ActiveExercise(
     val sets: List<ActiveSet> = listOf(ActiveSet())
 )
 
-class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
+class ActiveWorkoutViewModel(
+    private val workoutDao: WorkoutDao,
+    private val userPreferences: UserPreferences
+) : ViewModel() {
+
+    val unitSystemMetric = userPreferences.unitSystemMetricFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
 
     private val _workoutName = MutableStateFlow(getDynamicWorkoutName())
     val workoutName = _workoutName.asStateFlow()
@@ -206,12 +218,16 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 
     fun finishWorkout(onFinished: (Int?) -> Unit) {
+        val isMetric = unitSystemMetric.value
         val validSets = _activeExercises.value.flatMap { activeExercise ->
             val prevSets = _previousSets.value[activeExercise.exercise.id] ?: emptyList()
             activeExercise.sets.mapIndexed { index, activeSet ->
                 val prevSet = prevSets.getOrNull(index)
                 val weightVal = activeSet.weight.ifEmpty { 
-                    prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: "" 
+                    prevSet?.let { 
+                        val displayW = if (isMetric) it.weight else it.weight * 2.20462
+                        if (displayW % 1 == 0.0) displayW.toInt().toString() else "%.1f".format(displayW)
+                    } ?: "" 
                 }
                 val repsVal = activeSet.reps.ifEmpty { 
                     prevSet?.reps?.toString() ?: "" 
@@ -241,21 +257,27 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                 val prevSets = _previousSets.value[activeExercise.exercise.id] ?: emptyList()
                 activeExercise.sets.forEachIndexed { index, activeSet ->
                     val prevSet = prevSets.getOrNull(index)
-                    val finalWeight = activeSet.weight.ifEmpty { 
-                        prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: "" 
+                    
+                    val parsedWeight = activeSet.weight.toDoubleOrNull()
+                    val finalWeightInKg = if (parsedWeight != null) {
+                        if (isMetric) parsedWeight else parsedWeight / 2.20462
+                    } else {
+                        prevSet?.weight ?: 0.0
                     }
+
                     val finalReps = activeSet.reps.ifEmpty { 
                         prevSet?.reps?.toString() ?: "" 
                     }
 
-                    if (activeSet.isCompleted || (finalWeight.isNotEmpty() && finalReps.isNotEmpty())) {
-                        if (finalWeight.isNotEmpty() && finalReps.isNotEmpty()) {
+                    if (activeSet.isCompleted || (parsedWeight != null && finalReps.isNotEmpty()) || (prevSet != null && finalReps.isNotEmpty())) {
+                        val repsInt = finalReps.toIntOrNull() ?: 0
+                        if (finalWeightInKg > 0.0 && repsInt > 0) {
                             val setInfo = WorkoutSet(
                                 workoutId = workoutId,
                                 exerciseId = activeExercise.exercise.id,
                                 setNumber = index + 1,
-                                weight = finalWeight.toDoubleOrNull() ?: 0.0,
-                                reps = finalReps.toIntOrNull() ?: 0,
+                                weight = finalWeightInKg,
+                                reps = repsInt,
                                 setType = activeSet.setType,
                                 isCompleted = true
                             )
@@ -279,11 +301,14 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 }
 
-class ActiveWorkoutViewModelFactory(private val workoutDao: WorkoutDao) : ViewModelProvider.Factory {
+class ActiveWorkoutViewModelFactory(
+    private val workoutDao: WorkoutDao,
+    private val userPreferences: UserPreferences
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ActiveWorkoutViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ActiveWorkoutViewModel(workoutDao) as T
+            return ActiveWorkoutViewModel(workoutDao, userPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

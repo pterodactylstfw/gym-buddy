@@ -62,6 +62,8 @@ fun ProfileScreen(
     val totalVolume by viewModel.totalVolume.collectAsState()
     val totalWorkouts by viewModel.totalWorkouts.collectAsState()
 
+    val isMetric by viewModel.unitSystemMetric.collectAsState()
+
     val age by viewModel.age.collectAsState()
     val weight by viewModel.weight.collectAsState()
     val experience by viewModel.experienceLevel.collectAsState()
@@ -110,7 +112,9 @@ fun ProfileScreen(
             // --- HEADER PROFIL ---
             val experienceStr = experience.takeIf { it.isNotEmpty() } ?: "Athlete"
             val ageStr = if (age > 0) "$age yrs" else ""
-            val weightStr = if (weight > 0f) "${weight.toInt()} kg" else ""
+            val weightStr = if (weight > 0f) {
+                if (isMetric) "${weight.toInt()} kg" else "${(weight * 2.20462).toInt()} lbs"
+            } else ""
             val subtitleParts = listOf(experienceStr, ageStr, weightStr).filter { it.isNotEmpty() }
             val subtitle = if (subtitleParts.isNotEmpty()) subtitleParts.joinToString(" • ") else "Welcome to GymBuddy!"
 
@@ -162,7 +166,7 @@ fun ProfileScreen(
                 when (selectedTabIndex) {
                     0 -> WorkoutsTabContent(workouts, navController)
                     1 -> RoutinesTabContent(routines, navController)
-                    2 -> ProgressTabContent(totalVolume, totalWorkouts)
+                    2 -> ProgressTabContent(totalVolume, totalWorkouts, isMetric)
                 }
             }
         }
@@ -428,7 +432,7 @@ fun RoutinesTabContent(routines: List<Routine>, navController: NavController) {
 }
 
 @Composable
-fun ProgressTabContent(totalVolume: Double, totalWorkouts: Int) {
+fun ProgressTabContent(totalVolume: Double, totalWorkouts: Int, isMetric: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -445,8 +449,10 @@ fun ProgressTabContent(totalVolume: Double, totalWorkouts: Int) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("TOTAL VOLUME", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(8.dp))
+                val displayW = if (isMetric) totalVolume else totalVolume * 2.20462
+                val unit = if (isMetric) "kg" else "lbs"
                 Text(
-                    text = "${"%,.0f".format(totalVolume)} kg",
+                    text = "${"%,.0f".format(displayW)} $unit",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSurface

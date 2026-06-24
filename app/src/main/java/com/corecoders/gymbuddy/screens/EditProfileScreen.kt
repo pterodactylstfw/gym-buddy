@@ -40,6 +40,7 @@ fun EditProfileScreen(
     val currentGoal by viewModel.fitnessGoal.collectAsState()
     val currentExperience by viewModel.experienceLevel.collectAsState()
     val currentFrequency by viewModel.trainingFrequency.collectAsState()
+    val isMetric by viewModel.unitSystemMetric.collectAsState()
 
     var age by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
@@ -58,11 +59,21 @@ fun EditProfileScreen(
     val goals = listOf("Lose Weight", "Build Muscle", "Keep Fit", "Increase Endurance")
     val experiences = listOf("Beginner", "Intermediate", "Advanced")
 
-    LaunchedEffect(currentAge, currentGender, currentWeight, currentTargetWeight, currentHeight, currentGoal, currentExperience, currentFrequency) {
+    LaunchedEffect(currentAge, currentGender, currentWeight, currentTargetWeight, currentHeight, currentGoal, currentExperience, currentFrequency, isMetric) {
         if (age.isEmpty()) age = if (currentAge > 0) currentAge.toString() else ""
         if (gender.isEmpty()) gender = currentGender
-        if (weight.isEmpty()) weight = if (currentWeight > 0f) currentWeight.toString() else ""
-        if (targetWeight.isEmpty()) targetWeight = if (currentTargetWeight > 0f) currentTargetWeight.toString() else ""
+        if (weight.isEmpty()) {
+            weight = if (currentWeight > 0f) {
+                val displayW = if (isMetric) currentWeight else currentWeight * 2.20462f
+                if (displayW % 1 == 0f) displayW.toInt().toString() else "%.1f".format(displayW)
+            } else ""
+        }
+        if (targetWeight.isEmpty()) {
+            targetWeight = if (currentTargetWeight > 0f) {
+                val displayW = if (isMetric) currentTargetWeight else currentTargetWeight * 2.20462f
+                if (displayW % 1 == 0f) displayW.toInt().toString() else "%.1f".format(displayW)
+            } else ""
+        }
         if (height.isEmpty()) height = if (currentHeight > 0) currentHeight.toString() else ""
         if (goal.isEmpty()) goal = currentGoal
         if (experience.isEmpty()) experience = currentExperience
@@ -145,7 +156,7 @@ fun EditProfileScreen(
             OutlinedTextField(
                 value = weight,
                 onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
-                label = { Text("Current Weight (kg)") },
+                label = { Text(if (isMetric) "Current Weight (kg)" else "Current Weight (lbs)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -158,7 +169,7 @@ fun EditProfileScreen(
             OutlinedTextField(
                 value = targetWeight,
                 onValueChange = { targetWeight = it.filter { c -> c.isDigit() || c == '.' } },
-                label = { Text("Target Weight (kg)") },
+                label = { Text(if (isMetric) "Target Weight (kg)" else "Target Weight (lbs)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -268,14 +279,17 @@ fun EditProfileScreen(
                     val parsedHeight = height.toIntOrNull() ?: 0
                     val parsedFrequency = frequency.toIntOrNull() ?: 0
 
-                    if (parsedAge <= 0 || parsedWeight <= 0f || parsedHeight <= 0) {
+                    val saveWeight = if (isMetric) parsedWeight else parsedWeight / 2.20462f
+                    val saveTargetWeight = if (isMetric) parsedTargetWeight else parsedTargetWeight / 2.20462f
+
+                    if (parsedAge <= 0 || saveWeight <= 0f || parsedHeight <= 0) {
                         Toast.makeText(context, "Please fill in valid physical metrics (Age, Weight, Height).", Toast.LENGTH_SHORT).show()
                     } else {
                         viewModel.saveProfileData(
                             age = parsedAge,
                             gender = gender,
-                            weight = parsedWeight,
-                            targetWeight = parsedTargetWeight,
+                            weight = saveWeight,
+                            targetWeight = saveTargetWeight,
                             height = parsedHeight,
                             fitnessGoal = goal,
                             experienceLevel = experience,

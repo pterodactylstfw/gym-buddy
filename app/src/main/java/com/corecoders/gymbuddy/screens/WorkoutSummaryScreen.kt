@@ -21,6 +21,7 @@ import com.corecoders.gymbuddy.data.AppDatabase
 import com.corecoders.gymbuddy.data.SocialRepository
 import com.corecoders.gymbuddy.data.Workout
 import com.corecoders.gymbuddy.data.WorkoutSet
+import com.corecoders.gymbuddy.data.UserPreferences
 import com.corecoders.gymbuddy.navigation.BottomNavItem
 import kotlinx.coroutines.launch
 
@@ -32,6 +33,9 @@ fun WorkoutSummaryScreen(
     navController: NavController
 ) {
     val context = LocalContext.current
+    val userPreferences = remember { UserPreferences(context.applicationContext) }
+    val isMetric by userPreferences.unitSystemMetricFlow.collectAsState(initial = true)
+
     val coroutineScope = rememberCoroutineScope()
     val socialRepository = remember { SocialRepository() }
     
@@ -131,7 +135,17 @@ fun WorkoutSummaryScreen(
                             .padding(24.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(label = "Volume", value = "${String.format("%.1f", totalKg / 1000.0)}t")
+                        val volumeValue = if (isMetric) {
+                            "${String.format("%.1f", totalKg / 1000.0)}t"
+                        } else {
+                            val totalLbs = totalKg * 2.20462
+                            if (totalLbs >= 1000.0) {
+                                "${String.format("%.1f", totalLbs / 1000.0)}k lb"
+                            } else {
+                                "${totalLbs.toInt()} lb"
+                            }
+                        }
+                        StatItem(label = "Volume", value = volumeValue)
                         StatItem(label = "Duration", value = "${duration}m")
                         StatItem(label = "Sets", value = "${sets.size}")
                     }
@@ -144,7 +158,17 @@ fun WorkoutSummaryScreen(
                     onClick = {
                         isPublishing = true
                         coroutineScope.launch {
-                            val statsStr = "${String.format("%.1f", totalKg / 1000.0)}t volume • ${duration} min"
+                            val volumeStr = if (isMetric) {
+                                "${String.format("%.1f", totalKg / 1000.0)}t"
+                            } else {
+                                val totalLbs = totalKg * 2.20462
+                                if (totalLbs >= 1000.0) {
+                                    "${String.format("%.1f", totalLbs / 1000.0)}k lb"
+                                } else {
+                                    "${totalLbs.toInt()} lb"
+                                }
+                            }
+                            val statsStr = "$volumeStr volume • ${duration} min"
                             val success = socialRepository.publishPost(
                                 workoutName = workout?.name ?: "Workout",
                                 stats = statsStr,

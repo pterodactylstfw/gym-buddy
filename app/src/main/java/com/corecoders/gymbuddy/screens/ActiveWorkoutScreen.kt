@@ -280,12 +280,14 @@ fun ExerciseCard(
             
             Spacer(modifier = Modifier.height(20.dp))
 
+            val isMetric by viewModel.unitSystemMetric.collectAsState()
+
             // Labels pentru coloane
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 Text("SET", modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text("TYPE", modifier = Modifier.width(44.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("KG", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Text(if (isMetric) "KG" else "LBS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("REPS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.width(40.dp))
@@ -296,7 +298,10 @@ fun ExerciseCard(
                 val isCompleted = activeSet.isCompleted
                 val prevSet = prevSets.getOrNull(setIndex)
 
-                val weightPlaceholder = prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: ""
+                val weightPlaceholder = prevSet?.let {
+                    val displayW = if (isMetric) it.weight else it.weight * 2.20462
+                    if (displayW % 1 == 0.0) displayW.toInt().toString() else "%.1f".format(displayW)
+                } ?: ""
                 val repsPlaceholder = prevSet?.reps?.toString() ?: ""
                 
                 // Set Type Color

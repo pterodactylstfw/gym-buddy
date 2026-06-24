@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
                     factory = ExerciseViewModelFactory(database.exerciseDao())
                 )
                 val activeWorkoutViewModel: ActiveWorkoutViewModel = viewModel(
-                    factory = ActiveWorkoutViewModelFactory(database.workoutDao())
+                    factory = ActiveWorkoutViewModelFactory(database.workoutDao(), userPreferences)
                 )
                 val profileViewModel: ProfileViewModel = viewModel(
                     factory = ProfileViewModelFactory(database, database.workoutDao(), database.routineDao(), userPreferences)

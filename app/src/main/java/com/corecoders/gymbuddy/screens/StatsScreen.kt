@@ -41,14 +41,16 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
     val totalDuration by workoutViewModel.totalDurationMinutes.collectAsState()
     val muscleCounts by workoutViewModel.muscleSetCounts.collectAsState()
     val trainingFrequency by profileViewModel.trainingFrequency.collectAsState()
+    val isMetric by profileViewModel.unitSystemMetric.collectAsState()
 
     var showBodyCompDialog by remember { mutableStateOf<String?>(null) }
     var bodyCompInputValue by remember { mutableStateOf("") }
 
-    val formattedVolume = if (totalVolume >= 1000) {
-        "%.1fK".format(totalVolume / 1000)
+    val displayVolume = if (isMetric) totalVolume else totalVolume * 2.20462
+    val formattedVolume = if (displayVolume >= 1000) {
+        "%.1fK".format(displayVolume / 1000)
     } else {
-        totalVolume.toInt().toString()
+        displayVolume.toInt().toString()
     }
 
     Scaffold(
@@ -116,12 +118,14 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
             }
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val displayW = if (isMetric) weight else weight * 2.20462f
+                val weightValueStr = if (displayW > 0f) {
+                    if (displayW == displayW.toInt().toFloat()) displayW.toInt().toString() else "%.1f".format(displayW)
+                } else "--"
                 StatCard(
                     title = "WEIGHT",
-                    value = if (weight > 0f) {
-                        if (weight == weight.toInt().toFloat()) weight.toInt().toString() else weight.toString()
-                    } else "--",
-                    unit = "kg",
+                    value = weightValueStr,
+                    unit = if (isMetric) "kg" else "lbs",
                     footer = "From Profile",
                     hasEditIcon = true,
                     modifier = Modifier.weight(1f)
@@ -179,7 +183,7 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
                 StatCard(
                     title = "VOLUME",
                     value = formattedVolume,
-                    footer = "Total kg lifted",
+                    footer = if (isMetric) "Total kg lifted" else "Total lbs lifted",
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
