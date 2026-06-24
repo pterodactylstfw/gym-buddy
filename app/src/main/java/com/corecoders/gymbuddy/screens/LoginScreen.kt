@@ -253,8 +253,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            SocialLoginButton(text = "Continue with GitHub", iconResId = R.drawable.ic_github, onClick = { /* github */ })
-            Spacer(modifier = Modifier.height(12.dp))
             SocialLoginButton(text = "Continue with Google", iconResId = R.drawable.ic_google, onClick = { onGoogleSignIn() })
 
             Spacer(modifier = Modifier.height(32.dp))
