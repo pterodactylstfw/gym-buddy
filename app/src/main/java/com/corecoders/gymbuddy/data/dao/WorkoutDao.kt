@@ -57,6 +57,12 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workout_sets")
     suspend fun clearWorkoutSets()
+
+    @Query("DELETE FROM workout_sets WHERE workoutId IN (SELECT id FROM workouts WHERE userId = :userId)")
+    suspend fun deleteWorkoutSetsForUser(userId: String)
+
+    @Query("DELETE FROM workouts WHERE userId = :userId")
+    suspend fun deleteWorkoutsForUser(userId: String)
     
     @Query("UPDATE workouts SET userId = :newUserId WHERE userId = ''")
     suspend fun assignOrphanWorkouts(newUserId: String)

@@ -224,6 +224,13 @@ class ProfileViewModel(
     fun deleteAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val user = auth.currentUser
         if (user != null) {
+            val lastSignIn = user.metadata?.lastSignInTimestamp ?: 0
+            val now = System.currentTimeMillis()
+            // Daca autentificarea a fost facuta acum mai mult de 5 minute (300.000 ms), cerem reconectare preventiva
+            if (lastSignIn > 0 && (now - lastSignIn) > 5 * 60 * 1000) {
+                onError("Această operațiune este securizată și necesită o conectare recentă. Te rugăm să te deconectezi, să te reconectezi și să încerci din nou imediat.")
+                return
+            }
             val userId = user.uid
             viewModelScope.launch {
                 try {
@@ -235,15 +242,21 @@ class ProfileViewModel(
                             viewModelScope.launch {
                                 userPreferences.clearProfileData()
                                 kotlinx.coroutines.withContext(Dispatchers.IO) {
-                                    workoutDao.clearWorkouts()
-                                    workoutDao.clearWorkoutSets()
-                                    routineDao.clearRoutines()
-                                    routineDao.clearRoutineExercises()
+                                    workoutDao.deleteWorkoutSetsForUser(userId)
+                                    workoutDao.deleteWorkoutsForUser(userId)
+                                    routineDao.deleteRoutineExercisesForUser(userId)
+                                    routineDao.deleteRoutinesForUser(userId)
                                 }
                                 onSuccess()
                             }
                         } else {
-                            onError(task.exception?.localizedMessage ?: "Failed to delete account.")
+                            val exception = task.exception
+                            val msg = if (exception is com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
+                                "Această operațiune necesită o conectare recentă. Te rugăm să te deconectezi, să te reconectezi și să încerci din nou."
+                            } else {
+                                exception?.localizedMessage ?: "Failed to delete account."
+                            }
+                            onError(msg)
                         }
                     }
                 } catch (e: Exception) {

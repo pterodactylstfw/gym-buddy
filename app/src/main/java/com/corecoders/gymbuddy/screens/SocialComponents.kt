@@ -259,7 +259,7 @@ fun NotificationsBottomSheet(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     val text = when (notif.type) {
-                                        "CLAP" -> "clapped your workout: \"${notif.postWorkoutName}\""
+                                        "CLAP" -> "liked your workout: \"${notif.postWorkoutName}\""
                                         "FOLLOW" -> "started following you"
                                         "COMMENT" -> "commented on your workout: \"${notif.postWorkoutName}\""
                                         else -> "interacted with you"

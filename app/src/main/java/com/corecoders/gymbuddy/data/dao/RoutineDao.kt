@@ -36,6 +36,12 @@ interface RoutineDao {
 
     @Query("DELETE FROM routine_exercises")
     suspend fun clearRoutineExercises()
+
+    @Query("DELETE FROM routine_exercises WHERE routineId IN (SELECT id FROM routines WHERE userId = :userId)")
+    suspend fun deleteRoutineExercisesForUser(userId: String)
+
+    @Query("DELETE FROM routines WHERE userId = :userId")
+    suspend fun deleteRoutinesForUser(userId: String)
     
     @Query("UPDATE routines SET userId = :newUserId WHERE userId = ''")
     suspend fun assignOrphanRoutines(newUserId: String)
