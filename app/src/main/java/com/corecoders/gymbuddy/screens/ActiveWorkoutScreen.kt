@@ -1,8 +1,10 @@
 package com.corecoders.gymbuddy.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +34,7 @@ import com.corecoders.gymbuddy.ui.theme.SuccessGreen
 import com.corecoders.gymbuddy.ui.theme.WarningOrange
 import com.corecoders.gymbuddy.viewmodel.ActiveWorkoutViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ActiveWorkoutScreen(
     viewModel: ActiveWorkoutViewModel,
@@ -40,19 +43,31 @@ fun ActiveWorkoutScreen(
     onCancelClick: () -> Unit
 ) {
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
+    var setToDelete by remember { mutableStateOf<Pair<Int, Int>?>(null) } // Pair(exerciseIndex, setIndex)
+
     val activeExercises by viewModel.activeExercises.collectAsState()
     val workoutName by viewModel.workoutName.collectAsState()
+    val elapsedTime by viewModel.elapsedTime.collectAsState()
+    val restTimeRemaining by viewModel.restTimeRemaining.collectAsState()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { 
-                    Text(
-                        "ACTIVE SESSION", 
-                        style = MaterialTheme.typography.labelSmall,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    ) 
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "ACTIVE SESSION", 
+                            style = MaterialTheme.typography.labelSmall,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        ) 
+                        Text(
+                            elapsedTime,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { showCancelDialog = true }) {
@@ -60,9 +75,7 @@ fun ActiveWorkoutScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
-                        viewModel.finishWorkout { workoutId -> onFinishClick(workoutId) }
-                    }) {
+                    TextButton(onClick = { showFinishDialog = true }) {
                         Text("FINISH", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -98,11 +111,56 @@ fun ActiveWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 itemsIndexed(activeExercises) { exerciseIndex, activeExercise ->
+                    val previousSetsMap by viewModel.previousSets.collectAsState()
+                    val prevSets = previousSetsMap[activeExercise.exercise.id] ?: emptyList()
+
                     ExerciseCard(
                         exerciseIndex = exerciseIndex,
                         activeExercise = activeExercise,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        prevSets = prevSets,
+                        onLongClickSet = { setIndex ->
+                            if (activeExercise.sets.size > 1) {
+                                setToDelete = Pair(exerciseIndex, setIndex)
+                            }
+                        }
                     )
+                }
+            }
+
+            // Rest Timer Banner overlay at the bottom if active
+            restTimeRemaining?.let { remaining ->
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Rest Time",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Rest Timer: ${remaining / 60}:${String.format("%02d", remaining % 60)}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        TextButton(onClick = { viewModel.stopRestTimer() }) {
+                            Text("SKIP", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Black)
+                        }
+                    }
                 }
             }
 
@@ -142,14 +200,64 @@ fun ActiveWorkoutScreen(
                 }
             )
         }
+
+        if (showFinishDialog) {
+            AlertDialog(
+                onDismissRequest = { showFinishDialog = false },
+                title = { Text("Finish Workout?") },
+                text = { Text("Are you sure you want to finish and save this workout session?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showFinishDialog = false
+                            viewModel.finishWorkout { workoutId -> onFinishClick(workoutId) }
+                        }
+                    ) {
+                        Text("Finish", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showFinishDialog = false }) {
+                        Text("Keep Working Out")
+                    }
+                }
+            )
+        }
+
+        if (setToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { setToDelete = null },
+                title = { Text("Delete Set?") },
+                text = { Text("Are you sure you want to delete Set ${setToDelete!!.second + 1}?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val (eIdx, sIdx) = setToDelete!!
+                            viewModel.removeSetFromExercise(eIdx, sIdx)
+                            setToDelete = null
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { setToDelete = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExerciseCard(
     exerciseIndex: Int,
     activeExercise: com.corecoders.gymbuddy.viewmodel.ActiveExercise,
-    viewModel: ActiveWorkoutViewModel
+    viewModel: ActiveWorkoutViewModel,
+    prevSets: List<com.corecoders.gymbuddy.data.WorkoutSet>,
+    onLongClickSet: (Int) -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
@@ -178,6 +286,7 @@ fun ExerciseCard(
                 Text("TYPE", modifier = Modifier.width(44.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.weight(1f))
                 Text("KG", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("REPS", modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.width(40.dp))
             }
@@ -185,6 +294,10 @@ fun ExerciseCard(
             // Rândurile pentru Seturi
             activeExercise.sets.forEachIndexed { setIndex, activeSet ->
                 val isCompleted = activeSet.isCompleted
+                val prevSet = prevSets.getOrNull(setIndex)
+
+                val weightPlaceholder = prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: ""
+                val repsPlaceholder = prevSet?.reps?.toString() ?: ""
                 
                 // Set Type Color
                 val typeColor = when(activeSet.setType) {
@@ -197,11 +310,18 @@ fun ExerciseCard(
                 // Hairline Divider
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 
+                val hasData = activeSet.weight.isNotEmpty() || activeSet.reps.isNotEmpty()
+                val rowAlpha = if (isCompleted) 1f else if (hasData) 0.85f else 0.5f
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 12.dp)
-                        .alpha(if (isCompleted) 1f else 0.5f),
+                        .alpha(rowAlpha)
+                        .combinedClickable(
+                            onClick = { /* managed by field focus */ },
+                            onLongClick = { onLongClickSet(setIndex) }
+                        ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Index
@@ -245,6 +365,7 @@ fun ExerciseCard(
                     // Input KG
                     SetInputField(
                         value = activeSet.weight,
+                        placeholder = weightPlaceholder,
                         onValueChange = { newValue ->
                             val filtered = newValue.filter { it.isDigit() || it == '.' }
                             viewModel.updateSet(exerciseIndex, setIndex, weight = filtered)
@@ -257,6 +378,7 @@ fun ExerciseCard(
                     // Input Reps
                     SetInputField(
                         value = activeSet.reps,
+                        placeholder = repsPlaceholder,
                         onValueChange = { newValue ->
                             val filtered = newValue.filter { it.isDigit() }
                             viewModel.updateSet(exerciseIndex, setIndex, reps = filtered)
@@ -310,6 +432,7 @@ fun ExerciseCard(
 @Composable
 fun SetInputField(
     value: String,
+    placeholder: String,
     onValueChange: (String) -> Unit,
     isCompleted: Boolean
 ) {
@@ -337,6 +460,24 @@ fun SetInputField(
             textAlign = TextAlign.Center
         ),
         singleLine = true,
-        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        decorationBox = { innerTextField ->
+            Box(contentAlignment = Alignment.Center) {
+                if (value.isEmpty() && placeholder.isNotEmpty()) {
+                    Text(
+                        text = placeholder,
+                        color = if (isCompleted) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                innerTextField()
+            }
+        }
     )
 }

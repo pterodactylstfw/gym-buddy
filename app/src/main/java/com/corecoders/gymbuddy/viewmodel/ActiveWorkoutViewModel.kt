@@ -28,7 +28,6 @@ data class ActiveExercise(
 
 class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
-    // Numele antrenamentului, editabil de către utilizator
     private val _workoutName = MutableStateFlow(getDynamicWorkoutName())
     val workoutName = _workoutName.asStateFlow()
 
@@ -36,6 +35,79 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     val activeExercises = _activeExercises.asStateFlow()
 
     private var startTime: Long = System.currentTimeMillis()
+
+    private val _elapsedTime = MutableStateFlow("00:00")
+    val elapsedTime = _elapsedTime.asStateFlow()
+
+    private var timerJob: kotlinx.coroutines.Job? = null
+
+    private val _restTimeRemaining = MutableStateFlow<Int?>(null)
+    val restTimeRemaining = _restTimeRemaining.asStateFlow()
+
+    private var restTimerJob: kotlinx.coroutines.Job? = null
+
+    private val _previousSets = MutableStateFlow<Map<String, List<WorkoutSet>>>(emptyMap())
+    val previousSets = _previousSets.asStateFlow()
+
+    init {
+        startTimer()
+    }
+
+    fun startTimer() {
+        timerJob?.cancel()
+        startTime = System.currentTimeMillis()
+        timerJob = viewModelScope.launch {
+            while (true) {
+                val elapsedMs = System.currentTimeMillis() - startTime
+                val seconds = (elapsedMs / 1000) % 60
+                val minutes = (elapsedMs / 60000) % 60
+                val hours = (elapsedMs / 3600000)
+                _elapsedTime.value = if (hours > 0) {
+                    String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                } else {
+                    String.format("%02d:%02d", minutes, seconds)
+                }
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
+
+    fun stopTimer() {
+        timerJob?.cancel()
+        timerJob = null
+    }
+
+    fun startRestTimer(durationSeconds: Int = 90) {
+        restTimerJob?.cancel()
+        _restTimeRemaining.value = durationSeconds
+        restTimerJob = viewModelScope.launch {
+            var remaining = durationSeconds
+            while (remaining > 0) {
+                kotlinx.coroutines.delay(1000)
+                remaining--
+                _restTimeRemaining.value = remaining
+            }
+            _restTimeRemaining.value = null
+        }
+    }
+
+    fun stopRestTimer() {
+        restTimerJob?.cancel()
+        _restTimeRemaining.value = null
+    }
+
+    fun loadPreviousSets(exerciseId: String) {
+        viewModelScope.launch {
+            try {
+                val sets = workoutDao.getLastWorkoutSetsForExercise(exerciseId)
+                val currentMap = _previousSets.value.toMutableMap()
+                currentMap[exerciseId] = sets
+                _previousSets.value = currentMap
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
 
     private fun getDynamicWorkoutName(): String {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
@@ -56,6 +128,7 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         val currentList = _activeExercises.value.toMutableList()
         currentList.add(ActiveExercise(exercise = exercise))
         _activeExercises.value = currentList
+        loadPreviousSets(exercise.id)
     }
 
     fun removeExercise(index: Int) {
@@ -72,22 +145,43 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = exercises.map { exercise ->
             ActiveExercise(exercise = exercise, sets = listOf(ActiveSet()))
         }
+        startTimer()
+        exercises.forEach { loadPreviousSets(it.id) }
     }
 
     fun addSetToExercise(exerciseIndex: Int) {
         val currentList = _activeExercises.value.toMutableList()
         val currentExercise = currentList[exerciseIndex]
+        val currentSets = currentExercise.sets.toMutableList()
 
-        val lastSet = currentExercise.sets.lastOrNull()
+        val lastSet = currentSets.lastOrNull()
+        if (lastSet != null) {
+            val lastIdx = currentSets.lastIndex
+            currentSets[lastIdx] = lastSet.copy(isCompleted = true)
+            startRestTimer()
+        }
+
         val newSet = if (lastSet != null) {
-            ActiveSet(weight = lastSet.weight, reps = lastSet.reps, setType = lastSet.setType)
+            ActiveSet(weight = lastSet.weight, reps = lastSet.reps, setType = lastSet.setType, isCompleted = false)
         } else {
             ActiveSet()
         }
 
-        val newSets = currentExercise.sets.toMutableList().apply { add(newSet) }
-        currentList[exerciseIndex] = currentExercise.copy(sets = newSets)
+        currentSets.add(newSet)
+        currentList[exerciseIndex] = currentExercise.copy(sets = currentSets)
         _activeExercises.value = currentList
+    }
+
+    fun removeSetFromExercise(exerciseIndex: Int, setIndex: Int) {
+        val currentList = _activeExercises.value.toMutableList()
+        val currentExercise = currentList[exerciseIndex]
+        val currentSets = currentExercise.sets.toMutableList()
+
+        if (setIndex in currentSets.indices && currentSets.size > 1) {
+            currentSets.removeAt(setIndex)
+            currentList[exerciseIndex] = currentExercise.copy(sets = currentSets)
+            _activeExercises.value = currentList
+        }
     }
 
     fun updateSet(exerciseIndex: Int, setIndex: Int, weight: String? = null, reps: String? = null, setType: String? = null, isCompleted: Boolean? = null) {
@@ -105,12 +199,33 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
         currentList[exerciseIndex] = currentExercise.copy(sets = currentSets)
         _activeExercises.value = currentList
+
+        if (isCompleted == true && !oldSet.isCompleted) {
+            startRestTimer()
+        }
     }
 
     fun finishWorkout(onFinished: (Int?) -> Unit) {
-        val completedSets = _activeExercises.value.flatMap { it.sets }.filter { it.isCompleted && it.weight.isNotEmpty() && it.reps.isNotEmpty() }
+        val validSets = _activeExercises.value.flatMap { activeExercise ->
+            val prevSets = _previousSets.value[activeExercise.exercise.id] ?: emptyList()
+            activeExercise.sets.mapIndexed { index, activeSet ->
+                val prevSet = prevSets.getOrNull(index)
+                val weightVal = activeSet.weight.ifEmpty { 
+                    prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: "" 
+                }
+                val repsVal = activeSet.reps.ifEmpty { 
+                    prevSet?.reps?.toString() ?: "" 
+                }
+                Triple(activeSet, weightVal, repsVal)
+            }
+        }.filter { (activeSet, weightVal, repsVal) ->
+            (activeSet.isCompleted || (weightVal.isNotEmpty() && repsVal.isNotEmpty())) && 
+            weightVal.isNotEmpty() && repsVal.isNotEmpty()
+        }
         
-        if (completedSets.isEmpty()) {
+        if (validSets.isEmpty()) {
+            stopTimer()
+            stopRestTimer()
             onFinished(null)
             return
         }
@@ -123,21 +238,34 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
             val workoutId = workoutDao.insertWorkout(newWorkout).toInt()
 
             _activeExercises.value.forEach { activeExercise ->
+                val prevSets = _previousSets.value[activeExercise.exercise.id] ?: emptyList()
                 activeExercise.sets.forEachIndexed { index, activeSet ->
-                    if (activeSet.isCompleted && activeSet.weight.isNotEmpty() && activeSet.reps.isNotEmpty()) {
-                        val setInfo = WorkoutSet(
-                            workoutId = workoutId,
-                            exerciseId = activeExercise.exercise.id,
-                            setNumber = index + 1,
-                            weight = activeSet.weight.toDoubleOrNull() ?: 0.0,
-                            reps = activeSet.reps.toIntOrNull() ?: 0,
-                            setType = activeSet.setType,
-                            isCompleted = true
-                        )
-                        workoutDao.insertSet(setInfo)
+                    val prevSet = prevSets.getOrNull(index)
+                    val finalWeight = activeSet.weight.ifEmpty { 
+                        prevSet?.let { if (it.weight % 1 == 0.0) it.weight.toInt().toString() else "%.1f".format(it.weight) } ?: "" 
+                    }
+                    val finalReps = activeSet.reps.ifEmpty { 
+                        prevSet?.reps?.toString() ?: "" 
+                    }
+
+                    if (activeSet.isCompleted || (finalWeight.isNotEmpty() && finalReps.isNotEmpty())) {
+                        if (finalWeight.isNotEmpty() && finalReps.isNotEmpty()) {
+                            val setInfo = WorkoutSet(
+                                workoutId = workoutId,
+                                exerciseId = activeExercise.exercise.id,
+                                setNumber = index + 1,
+                                weight = finalWeight.toDoubleOrNull() ?: 0.0,
+                                reps = finalReps.toIntOrNull() ?: 0,
+                                setType = activeSet.setType,
+                                isCompleted = true
+                            )
+                            workoutDao.insertSet(setInfo)
+                        }
                     }
                 }
             }
+            stopTimer()
+            stopRestTimer()
             onFinished(workoutId)
         }
     }
@@ -146,6 +274,8 @@ class ActiveWorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         _activeExercises.value = emptyList()
         _workoutName.value = getDynamicWorkoutName()
         startTime = System.currentTimeMillis()
+        stopRestTimer()
+        startTimer()
     }
 }
 

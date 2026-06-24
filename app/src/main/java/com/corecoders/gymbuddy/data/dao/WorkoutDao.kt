@@ -60,4 +60,17 @@ interface WorkoutDao {
     
     @Query("UPDATE workouts SET userId = :newUserId WHERE userId = ''")
     suspend fun assignOrphanWorkouts(newUserId: String)
+
+    @Query("""
+        SELECT ws.* FROM workout_sets ws 
+        INNER JOIN workouts w ON ws.workoutId = w.id 
+        WHERE ws.exerciseId = :exerciseId AND w.id = (
+            SELECT workoutId FROM workout_sets 
+            INNER JOIN workouts ON workout_sets.workoutId = workouts.id 
+            WHERE exerciseId = :exerciseId 
+            ORDER BY date DESC LIMIT 1
+        )
+        ORDER BY ws.setNumber ASC
+    """)
+    suspend fun getLastWorkoutSetsForExercise(exerciseId: String): List<WorkoutSet>
 }
