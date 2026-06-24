@@ -53,7 +53,6 @@ fun ProfileScreen(
     onSignOutSuccess: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val tabs = listOf("Workouts", "Routines", "Progress")
     val user = Firebase.auth.currentUser
@@ -86,20 +85,11 @@ fun ProfileScreen(
                     IconButton(onClick = { /* TODO: Share */ }) {
                         Icon(Icons.Outlined.IosShare, contentDescription = "Share", tint = MaterialTheme.colorScheme.onBackground)
                     }
-                    IconButton(onClick = { navController.navigate("onboarding") }) {
+                    IconButton(onClick = { navController.navigate("edit_profile") }) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onBackground)
                     }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onBackground)
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete Account", tint = MaterialTheme.colorScheme.error)
-                    }
-                    IconButton(onClick = {
-                        viewModel.signOut()
-                        onSignOutSuccess()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Sign Out", tint = MaterialTheme.colorScheme.primary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -173,36 +163,7 @@ fun ProfileScreen(
             }
         }
 
-        if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Delete Account") },
-                text = { Text("Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showDeleteDialog = false
-                            viewModel.deleteAccount(
-                                onSuccess = {
-                                    Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
-                                    onSignOutSuccess()
-                                },
-                                onError = { error ->
-                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                                }
-                            )
-                        }
-                    ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
+
 
         if (showPhotoMenu) {
             ModalBottomSheet(

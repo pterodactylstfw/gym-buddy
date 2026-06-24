@@ -76,6 +76,8 @@ class ProfileViewModel(
     val trainingFrequency = userPreferences.trainingFrequencyFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 4)
     val experienceLevel = userPreferences.experienceLevelFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
     val fitnessGoal = userPreferences.fitnessGoalFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val gender = userPreferences.genderFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val targetWeight = userPreferences.targetWeightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0f)
     val profilePictureUri = userPreferences.profilePictureUriFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
     val bodyFat = userPreferences.bodyFatFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
     val muscleMass = userPreferences.muscleMassFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
@@ -90,6 +92,45 @@ class ProfileViewModel(
                 muscleMass = muscleMass ?: "",
                 waistSize = waistSize ?: ""
             )
+        }
+    }
+
+    fun saveProfileData(
+        age: Int,
+        gender: String,
+        weight: Float,
+        targetWeight: Float,
+        height: Int,
+        fitnessGoal: String,
+        experienceLevel: String,
+        trainingFrequency: Int,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            userPreferences.updateProfileData(
+                age = age,
+                weight = weight,
+                height = height,
+                targetWeight = targetWeight,
+                trainingFrequency = trainingFrequency,
+                fitnessGoal = fitnessGoal,
+                experienceLevel = experienceLevel,
+                gender = gender
+            )
+            userPreferences.updateOnboardingCompleted(true)
+            
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            repository.saveOnboardingDetails(
+                age = age,
+                gender = gender,
+                weight = weight,
+                targetWeight = targetWeight,
+                height = height,
+                fitnessGoal = fitnessGoal,
+                experienceLevel = experienceLevel,
+                trainingFrequency = trainingFrequency
+            )
+            onSuccess()
         }
     }
 

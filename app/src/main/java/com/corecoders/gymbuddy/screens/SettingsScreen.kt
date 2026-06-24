@@ -1,5 +1,6 @@
 package com.corecoders.gymbuddy.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,21 +17,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.corecoders.gymbuddy.viewmodel.SettingsViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
+import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
+fun SettingsScreen(
+    navController: NavController,
+    viewModel: SettingsViewModel,
+    profileViewModel: ProfileViewModel
+) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
     val darkMode by viewModel.darkMode.collectAsState()
     val unitSystem by viewModel.unitSystemMetric.collectAsState()
     val autoComplete by viewModel.autoCompleteSet.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -65,7 +72,7 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
                     icon = Icons.Outlined.Person,
                     title = "Profile",
                     subtitle = "Manage your physical metrics",
-                    onClick = { /* TODO */ }
+                    onClick = { navController.navigate("edit_profile") }
                 )
             }
 
@@ -115,8 +122,8 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        Firebase.auth.signOut()
-                        navController.navigate("login") { popUpTo(0) }
+                        profileViewModel.signOut()
+                        navController.navigate("login") { popUpTo(0) { inclusive = true } }
                     }
             ) {
                 Box(
@@ -127,7 +134,60 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- DELETE ACCOUNT BUTTON ---
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showDeleteDialog = true
+                    }
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("DELETE ACCOUNT", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.sp)
+                }
+            }
+
             Spacer(modifier = Modifier.height(48.dp))
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Account") },
+                text = { Text("Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showDeleteDialog = false
+                            profileViewModel.deleteAccount(
+                                onSuccess = {
+                                    Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
+                                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                                },
+                                onError = { error ->
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }

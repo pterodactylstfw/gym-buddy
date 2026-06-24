@@ -332,7 +332,18 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("settings") {
-                            SettingsScreen(navController = navController, viewModel = settingsViewModel)
+                            SettingsScreen(
+                                navController = navController,
+                                viewModel = settingsViewModel,
+                                profileViewModel = profileViewModel
+                            )
+                        }
+
+                        composable("edit_profile") {
+                            EditProfileScreen(
+                                navController = navController,
+                                viewModel = profileViewModel
+                            )
                         }
 
                         composable("workout_summary/{workoutId}") { backStackEntry ->
