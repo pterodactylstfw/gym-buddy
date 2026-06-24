@@ -70,10 +70,38 @@ class MainActivity : ComponentActivity() {
 
                 val onboardingCompleted by userPreferences.onboardingCompletedFlow.collectAsState(initial = null)
 
+                LaunchedEffect(auth.currentUser) {
+                    val user = auth.currentUser
+                    if (user != null) {
+                        val repository = com.corecoders.gymbuddy.data.SocialRepository()
+                        val profile = repository.getUserProfile(user.uid)
+                        if (profile != null) {
+                            userPreferences.updateProfileData(
+                                age = profile.age,
+                                weight = profile.weight,
+                                height = profile.height,
+                                targetWeight = profile.targetWeight,
+                                trainingFrequency = profile.trainingFrequency,
+                                fitnessGoal = profile.fitnessGoal,
+                                experienceLevel = profile.experienceLevel,
+                                gender = profile.gender
+                            )
+                            userPreferences.updateBodyComposition(
+                                bodyFat = profile.bodyFat,
+                                muscleMass = profile.muscleMass,
+                                waistSize = profile.waistSize
+                            )
+                            userPreferences.updateOnboardingCompleted(profile.onboardingCompleted)
+                        } else {
+                            userPreferences.updateOnboardingCompleted(false)
+                        }
+                    }
+                }
+
                 LaunchedEffect(auth.currentUser, onboardingCompleted) {
                     if (auth.currentUser != null && onboardingCompleted == false) {
                         val currentRoute = navController.currentBackStackEntry?.destination?.route
-                        if (currentRoute != "onboarding") {
+                        if (currentRoute != "onboarding" && currentRoute != "login" && currentRoute != "register") {
                             navController.navigate("onboarding") {
                                 popUpTo(0) { inclusive = true }
                             }
@@ -111,16 +139,68 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 onLoginSuccess = {
                                     val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
-                                    scope.launch { userPreferences.updateOnboardingCompleted(true) }
-                                    navController.navigate(BottomNavItem.Dashboard.route) {
-                                        popUpTo("login") { inclusive = true }
+                                    scope.launch {
+                                        val user = auth.currentUser
+                                        if (user != null) {
+                                            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+                                            val profile = repository.getUserProfile(user.uid)
+                                            if (profile != null) {
+                                                userPreferences.updateProfileData(
+                                                    age = profile.age,
+                                                    weight = profile.weight,
+                                                    height = profile.height,
+                                                    targetWeight = profile.targetWeight,
+                                                    trainingFrequency = profile.trainingFrequency,
+                                                    fitnessGoal = profile.fitnessGoal,
+                                                    experienceLevel = profile.experienceLevel,
+                                                    gender = profile.gender
+                                                )
+                                                userPreferences.updateBodyComposition(
+                                                    bodyFat = profile.bodyFat,
+                                                    muscleMass = profile.muscleMass,
+                                                    waistSize = profile.waistSize
+                                                )
+                                                userPreferences.updateOnboardingCompleted(profile.onboardingCompleted)
+                                                
+                                                if (profile.onboardingCompleted) {
+                                                    navController.navigate(BottomNavItem.Dashboard.route) {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
+                                                } else {
+                                                    navController.navigate("onboarding") {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
+                                                }
+                                            } else {
+                                                userPreferences.updateOnboardingCompleted(false)
+                                                navController.navigate("onboarding") {
+                                                    popUpTo("login") { inclusive = true }
+                                                }
+                                            }
+                                        } else {
+                                            navController.navigate(BottomNavItem.Dashboard.route) {
+                                                popUpTo("login") { inclusive = true }
+                                            }
+                                        }
                                     }
                                 }
                             )
                         }
 
                         composable("register") {
-                            RegisterScreen(navController = navController)
+                            RegisterScreen(
+                                navController = navController,
+                                onRegisterSuccess = {
+                                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                    scope.launch {
+                                        userPreferences.clearProfileData()
+                                        userPreferences.updateOnboardingCompleted(false)
+                                        navController.navigate("onboarding") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    }
+                                }
+                            )
                         }
 
                         composable("onboarding") {

@@ -48,6 +48,71 @@ class SocialRepository {
             false
         }
     }
+
+    suspend fun saveOnboardingDetails(
+        age: Int,
+        gender: String,
+        weight: Float,
+        targetWeight: Float,
+        height: Int,
+        fitnessGoal: String,
+        experienceLevel: String,
+        trainingFrequency: Int
+    ): Boolean {
+        val userId = getCurrentUserId() ?: return false
+        return try {
+            val docRef = firestore.collection("users").document(userId)
+            val updates = mapOf(
+                "age" to age,
+                "gender" to gender,
+                "weight" to weight,
+                "targetWeight" to targetWeight,
+                "height" to height,
+                "fitnessGoal" to fitnessGoal,
+                "experienceLevel" to experienceLevel,
+                "trainingFrequency" to trainingFrequency,
+                "onboardingCompleted" to true
+            )
+            docRef.update(updates).await()
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error updating onboarding details in firestore", e)
+            false
+        }
+    }
+
+    suspend fun updateBodyComposition(
+        bodyFat: String,
+        muscleMass: String,
+        waistSize: String
+    ): Boolean {
+        val userId = getCurrentUserId() ?: return false
+        return try {
+            val docRef = firestore.collection("users").document(userId)
+            val updates = mapOf(
+                "bodyFat" to bodyFat,
+                "muscleMass" to muscleMass,
+                "waistSize" to waistSize
+            )
+            docRef.update(updates).await()
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error updating body composition in firestore", e)
+            false
+        }
+    }
+
+    suspend fun updateAvatarUri(avatarUri: String): Boolean {
+        val userId = getCurrentUserId() ?: return false
+        return try {
+            val docRef = firestore.collection("users").document(userId)
+            docRef.update("avatarUri", avatarUri).await()
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error updating avatarUri in firestore", e)
+            false
+        }
+    }
     
     suspend fun getUserProfile(userId: String): UserProfile? {
         return try {

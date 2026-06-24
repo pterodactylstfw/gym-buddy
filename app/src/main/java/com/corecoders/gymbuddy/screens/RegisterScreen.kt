@@ -37,7 +37,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, kotlin.ExperimentalStdlibApi::class)
 @Composable
-fun RegisterScreen(navController: NavController) {
+fun RegisterScreen(
+    navController: NavController,
+    onRegisterSuccess: () -> Unit
+) {
 
     val auth: FirebaseAuth = Firebase.auth
     val context = LocalContext.current
@@ -69,15 +72,11 @@ fun RegisterScreen(navController: NavController) {
                                     if (success) {
                                         isLoading = false
                                         Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                                        navController.navigate("onboarding") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
+                                        onRegisterSuccess()
                                     } else {
                                         isLoading = false
                                         Toast.makeText(context, "Account created but username setup failed.", Toast.LENGTH_LONG).show()
-                                        navController.navigate("onboarding") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
+                                        onRegisterSuccess()
                                     }
                                 }
                             }

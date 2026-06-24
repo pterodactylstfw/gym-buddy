@@ -38,6 +38,10 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel,
     onFinish: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.loadProfileData()
+    }
+
     val pagerState = rememberPagerState(pageCount = { 7 })
     val coroutineScope = rememberCoroutineScope()
 

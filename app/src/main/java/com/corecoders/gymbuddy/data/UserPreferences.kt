@@ -123,6 +123,7 @@ class UserPreferences(private val context: Context) {
 
     suspend fun clearProfileData() {
         context.dataStore.edit { prefs ->
+            prefs.remove(PreferencesKeys.ONBOARDING_COMPLETED)
             prefs.remove(PreferencesKeys.AGE)
             prefs.remove(PreferencesKeys.WEIGHT)
             prefs.remove(PreferencesKeys.HEIGHT)

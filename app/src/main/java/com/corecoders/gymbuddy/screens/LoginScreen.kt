@@ -85,11 +85,69 @@ fun LoginScreen(
     val scope = rememberCoroutineScope()
     val credentialManager = CredentialManager.create(context)
     val webClientId = stringResource(id = R.string.default_web_client_id)
+    val socialRepository = remember { com.corecoders.gymbuddy.data.SocialRepository() }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val onGoogleSignIn = {
+        if (activity != null) {
+            isLoading = true
+            scope.launch {
+                try {
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(webClientId)
+                        .setAutoSelectEnabled(false)
+                        .build()
+
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+
+                    val result = credentialManager.getCredential(
+                        request = request,
+                        context = activity
+                    )
+
+                    val credential = result.credential
+                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                        val authResult = auth.signInWithCredential(authCredential).await()
+                        val user = authResult.user
+                        if (user != null) {
+                            val existingProfile = socialRepository.getUserProfile(user.uid)
+                            if (existingProfile == null) {
+                                val emailPrefix = user.email?.substringBefore("@")?.filter { it.isLetterOrDigit() } ?: "user"
+                                val uniqueUsername = "$emailPrefix${System.currentTimeMillis() % 1000}"
+                                socialRepository.createOrUpdateProfile(
+                                    username = uniqueUsername,
+                                    name = user.displayName ?: emailPrefix,
+                                    avatarUri = user.photoUrl?.toString() ?: ""
+                                )
+                            }
+                            isLoading = false
+                            onLoginSuccess()
+                        } else {
+                            isLoading = false
+                            Toast.makeText(context, "Google Sign-In failed", Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        isLoading = false
+                        Toast.makeText(context, "Unexpected credential type", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    isLoading = false
+                    Toast.makeText(context, e.localizedMessage ?: "Google Sign-In error", Toast.LENGTH_LONG).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, "Activity context required", Toast.LENGTH_LONG).show()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -197,7 +255,7 @@ fun LoginScreen(
 
             SocialLoginButton(text = "Continue with GitHub", iconResId = R.drawable.ic_github, onClick = { /* github */ })
             Spacer(modifier = Modifier.height(12.dp))
-            SocialLoginButton(text = "Continue with Google", iconResId = R.drawable.ic_google, onClick = { /* google */ })
+            SocialLoginButton(text = "Continue with Google", iconResId = R.drawable.ic_google, onClick = { onGoogleSignIn() })
 
             Spacer(modifier = Modifier.height(32.dp))
 

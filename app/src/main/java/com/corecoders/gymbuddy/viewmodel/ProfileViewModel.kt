@@ -84,6 +84,12 @@ class ProfileViewModel(
     fun updateBodyComposition(bodyFat: String?, muscleMass: String?, waistSize: String?) {
         viewModelScope.launch {
             userPreferences.updateBodyComposition(bodyFat, muscleMass, waistSize)
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            repository.updateBodyComposition(
+                bodyFat = bodyFat ?: "",
+                muscleMass = muscleMass ?: "",
+                waistSize = waistSize ?: ""
+            )
         }
     }
 
@@ -97,6 +103,8 @@ class ProfileViewModel(
                 inputStream?.close()
                 outputStream.close()
                 userPreferences.updateProfilePictureUri(file.absolutePath)
+                val repository = com.corecoders.gymbuddy.data.SocialRepository()
+                repository.updateAvatarUri(file.absolutePath)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -106,6 +114,8 @@ class ProfileViewModel(
     fun removeProfilePicture() {
         viewModelScope.launch {
             userPreferences.updateProfilePictureUri("")
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            repository.updateAvatarUri("")
         }
     }
 

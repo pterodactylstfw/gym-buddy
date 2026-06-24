@@ -6,7 +6,19 @@ data class UserProfile(
     val email: String = "",
     val name: String = "",
     val avatarUri: String = "",
-    val friends: List<String> = emptyList()
+    val friends: List<String> = emptyList(),
+    val onboardingCompleted: Boolean = false,
+    val age: Int = 0,
+    val weight: Float = 0f,
+    val height: Int = 0,
+    val targetWeight: Float = 0f,
+    val trainingFrequency: Int = 0,
+    val fitnessGoal: String = "",
+    val experienceLevel: String = "",
+    val gender: String = "",
+    val bodyFat: String = "",
+    val muscleMass: String = "",
+    val waistSize: String = ""
 )
 
 data class SocialPostDto(
