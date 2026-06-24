@@ -356,6 +356,11 @@ class MainActivity : ComponentActivity() {
                             WorkoutDetailScreen(workoutId = workoutId, database = database, onBack = { navController.popBackStack() })
                         }
 
+                        composable("other_user_profile/{userId}") { backStackEntry ->
+                            val targetUserId = backStackEntry.arguments?.getString("userId") ?: ""
+                            OtherUserProfileScreen(navController = navController, userId = targetUserId)
+                        }
+
                         composable("settings") {
                             SettingsScreen(
                                 navController = navController,

@@ -83,7 +83,11 @@ fun SocialScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(feedPosts) { post ->
-                    SocialActivityCard(post, onClapClick = { viewModel.toggleClap(post.postId) })
+                    SocialActivityCard(
+                        post = post, 
+                        onClapClick = { viewModel.toggleClap(post.postId) },
+                        onUserClick = { navController.navigate("other_user_profile/${post.userId}") }
+                    )
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
             }
@@ -92,7 +96,7 @@ fun SocialScreen(
 }
 
 @Composable
-fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit) {
+fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit, onUserClick: () -> Unit = {}) {
     val timeAgo = DateUtils.getRelativeTimeSpanString(post.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     val hasClapped = post.clappedBy.contains(currentUserId)
@@ -105,7 +109,12 @@ fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header: User Info
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onUserClick() }
+            ) {
                 Box(
                     modifier = Modifier
                         .size(40.dp)

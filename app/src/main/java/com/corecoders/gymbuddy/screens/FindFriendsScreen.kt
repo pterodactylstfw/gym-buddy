@@ -1,6 +1,7 @@
 package com.corecoders.gymbuddy.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -103,7 +104,8 @@ fun FindFriendsScreen(
                             amIFollowingThem = amIFollowingThem,
                             areTheyFollowingMe = areTheyFollowingMe,
                             onAddClick = { viewModel.addFriend(user.userId) },
-                            onRemoveClick = { viewModel.removeFriend(user.userId) }
+                            onRemoveClick = { viewModel.removeFriend(user.userId) },
+                            onClick = { navController.navigate("other_user_profile/${user.userId}") }
                         )
                     }
                 }
@@ -118,12 +120,13 @@ fun UserCard(
     amIFollowingThem: Boolean, 
     areTheyFollowingMe: Boolean,
     onAddClick: () -> Unit,
-    onRemoveClick: () -> Unit
+    onRemoveClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
         Row(
             modifier = Modifier

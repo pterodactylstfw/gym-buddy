@@ -109,9 +109,9 @@ class ProfileViewModel(
             userPreferences.updateBodyComposition(bodyFat, muscleMass, waistSize)
             val repository = com.corecoders.gymbuddy.data.SocialRepository()
             repository.updateBodyComposition(
-                bodyFat = bodyFat ?: "",
-                muscleMass = muscleMass ?: "",
-                waistSize = waistSize ?: ""
+                bodyFat = bodyFat,
+                muscleMass = muscleMass,
+                waistSize = waistSize
             )
         }
     }

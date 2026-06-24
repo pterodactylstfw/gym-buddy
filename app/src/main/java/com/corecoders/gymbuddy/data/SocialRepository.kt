@@ -82,19 +82,21 @@ class SocialRepository {
     }
 
     suspend fun updateBodyComposition(
-        bodyFat: String,
-        muscleMass: String,
-        waistSize: String
+        bodyFat: String?,
+        muscleMass: String?,
+        waistSize: String?
     ): Boolean {
         val userId = getCurrentUserId() ?: return false
         return try {
             val docRef = firestore.collection("users").document(userId)
-            val updates = mapOf(
-                "bodyFat" to bodyFat,
-                "muscleMass" to muscleMass,
-                "waistSize" to waistSize
-            )
-            docRef.update(updates).await()
+            val updates = mutableMapOf<String, Any>()
+            bodyFat?.let { updates["bodyFat"] = it }
+            muscleMass?.let { updates["muscleMass"] = it }
+            waistSize?.let { updates["waistSize"] = it }
+            
+            if (updates.isNotEmpty()) {
+                docRef.update(updates).await()
+            }
             true
         } catch (e: Exception) {
             Log.e("SocialRepository", "Error updating body composition in firestore", e)
@@ -180,11 +182,11 @@ class SocialRepository {
          }
     }
     
-    suspend fun getFollowers(): List<UserProfile> {
-        val currentUserId = getCurrentUserId() ?: return emptyList()
+    suspend fun getFollowers(targetUserId: String? = null): List<UserProfile> {
+        val uid = targetUserId ?: getCurrentUserId() ?: return emptyList()
         return try {
             val result = firestore.collection("users")
-                .whereArrayContains("friends", currentUserId)
+                .whereArrayContains("friends", uid)
                 .get()
                 .await()
             result.toObjects(UserProfile::class.java)
@@ -193,10 +195,10 @@ class SocialRepository {
         }
     }
     
-    suspend fun getFollowing(): List<UserProfile> {
-        val currentUserId = getCurrentUserId() ?: return emptyList()
+    suspend fun getFollowing(targetUserId: String? = null): List<UserProfile> {
+        val uid = targetUserId ?: getCurrentUserId() ?: return emptyList()
         return try {
-            val doc = firestore.collection("users").document(currentUserId).get().await()
+            val doc = firestore.collection("users").document(uid).get().await()
             val profile = doc.toObject(UserProfile::class.java) ?: return emptyList()
             val friendIds = profile.friends
             
@@ -211,6 +213,19 @@ class SocialRepository {
             }
             followingList
         } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    suspend fun getUserPosts(userId: String): List<SocialPostDto> {
+        return try {
+            val result = firestore.collection("posts")
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+            result.toObjects(SocialPostDto::class.java).sortedByDescending { it.timestamp }
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error getting user posts", e)
             emptyList()
         }
     }

@@ -235,6 +235,10 @@ fun ProfileScreen(
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
+                                    },
+                                    modifier = Modifier.clickable {
+                                        showFollowersList = false
+                                        navController.navigate("other_user_profile/${user.userId}")
                                     }
                                 )
                             }
