@@ -7,6 +7,9 @@ import com.corecoders.gymbuddy.data.dto.SocialPostDto
 import com.corecoders.gymbuddy.data.dto.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 
 class SocialViewModel : ViewModel() {
@@ -24,16 +27,32 @@ class SocialViewModel : ViewModel() {
     private val _currentUserProfile = MutableStateFlow<UserProfile?>(null)
     val currentUserProfile = _currentUserProfile.asStateFlow()
 
+    private val _comments = MutableStateFlow<List<com.corecoders.gymbuddy.data.dto.Comment>>(emptyList())
+    val comments = _comments.asStateFlow()
+
+    private val _notifications = MutableStateFlow<List<com.corecoders.gymbuddy.data.dto.NotificationDto>>(emptyList())
+    val notifications = _notifications.asStateFlow()
+
+    val unreadNotificationsCount = _notifications
+        .map { list -> list.count { !it.read } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     init {
         viewModelScope.launch {
             com.corecoders.gymbuddy.data.AuthManager.currentUserIdFlow().collect { uid ->
                 if (uid.isNotEmpty()) {
                     loadCurrentUserProfile()
                     loadFeed()
+                    loadNotifications()
                 } else {
                     _currentUserProfile.value = null
                     _feedPosts.value = emptyList()
                     _searchResults.value = emptyList()
+                    _notifications.value = emptyList()
                 }
             }
         }
@@ -120,6 +139,43 @@ class SocialViewModel : ViewModel() {
             _feedPosts.value = updatedPosts
 
             repository.toggleClap(postId)
+        }
+    }
+
+    fun loadNotifications() {
+        viewModelScope.launch {
+            _notifications.value = repository.getNotifications()
+        }
+    }
+
+    fun markNotificationsAsRead() {
+        viewModelScope.launch {
+            repository.markNotificationsAsRead()
+            loadNotifications() // refresh
+        }
+    }
+
+    fun loadComments(postId: String) {
+        viewModelScope.launch {
+            _comments.value = repository.getComments(postId)
+        }
+    }
+
+    fun addComment(postId: String, text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val success = repository.addComment(postId, text)
+            if (success) {
+                loadComments(postId)
+                // Also optimistically update local comments count in feed
+                _feedPosts.value = _feedPosts.value.map { post ->
+                    if (post.postId == postId) {
+                        post.copy(comments = post.comments + 1)
+                    } else {
+                        post
+                    }
+                }
+            }
         }
     }
 }

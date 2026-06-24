@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val userPreferences: UserPreferences) : ViewModel() {
 
-    val darkMode: StateFlow<Boolean?> = userPreferences.darkModeFlow.stateIn(
+    val themeMode: StateFlow<String?> = userPreferences.themeModeFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = null
@@ -29,9 +29,9 @@ class SettingsViewModel(private val userPreferences: UserPreferences) : ViewMode
         initialValue = true
     )
 
-    fun toggleDarkMode(enabled: Boolean) {
+    fun selectThemeMode(mode: String) {
         viewModelScope.launch {
-            userPreferences.updateDarkMode(enabled)
+            userPreferences.updateThemeMode(mode)
         }
     }
 

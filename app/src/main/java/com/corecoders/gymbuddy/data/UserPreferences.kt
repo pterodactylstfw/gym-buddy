@@ -20,7 +20,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 class UserPreferences(private val context: Context) {
 
     private object PreferencesKeys {
-        val DARK_MODE = booleanPreferencesKey("dark_mode")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val UNIT_SYSTEM_METRIC = booleanPreferencesKey("unit_system_metric")
         val AUTO_COMPLETE_SET = booleanPreferencesKey("auto_complete_set")
         
@@ -53,7 +53,7 @@ class UserPreferences(private val context: Context) {
             }
     }
 
-    val darkModeFlow: Flow<Boolean> = getFlow(PreferencesKeys.DARK_MODE, true)
+    val themeModeFlow: Flow<String> = getFlow(PreferencesKeys.THEME_MODE, "system")
     val unitSystemMetricFlow: Flow<Boolean> = getFlow(PreferencesKeys.UNIT_SYSTEM_METRIC, true)
     val autoCompleteSetFlow: Flow<Boolean> = getFlow(PreferencesKeys.AUTO_COMPLETE_SET, true)
     val onboardingCompletedFlow: Flow<Boolean> = getFlow(PreferencesKeys.ONBOARDING_COMPLETED, false)
@@ -71,8 +71,8 @@ class UserPreferences(private val context: Context) {
     val muscleMassFlow: Flow<String> = getFlow(PreferencesKeys.MUSCLE_MASS, "")
     val waistSizeFlow: Flow<String> = getFlow(PreferencesKeys.WAIST_SIZE, "")
 
-    suspend fun updateDarkMode(enabled: Boolean) {
-        context.dataStore.edit { it[PreferencesKeys.DARK_MODE] = enabled }
+    suspend fun updateThemeMode(mode: String) {
+        context.dataStore.edit { it[PreferencesKeys.THEME_MODE] = mode }
     }
 
     suspend fun updateUnitSystem(metric: Boolean) {

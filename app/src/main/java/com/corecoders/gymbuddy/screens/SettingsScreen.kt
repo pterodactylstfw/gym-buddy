@@ -34,10 +34,11 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val darkMode by viewModel.darkMode.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
     val unitSystem by viewModel.unitSystemMetric.collectAsState()
     val autoComplete by viewModel.autoCompleteSet.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -81,13 +82,18 @@ fun SettingsScreen(
             // --- PREFERENCES ---
             SettingsGroupHeader("PREFERENCES")
             SettingsCard {
-                SettingsSwitchRow(
+                val themeLabel = when (themeMode) {
+                    "light" -> "Light"
+                    "dark" -> "Dark"
+                    else -> "System default"
+                }
+                SettingsNavRow(
                     icon = Icons.Outlined.DarkMode,
-                    title = "Dark Mode",
-                    checked = darkMode ?: true,
-                    onCheckedChange = { viewModel.toggleDarkMode(it) }
+                    title = "Theme",
+                    subtitle = themeLabel,
+                    onClick = { showThemeDialog = true }
                 )
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
                 SettingsSwitchRow(
                     icon = Icons.Outlined.Language,
                     title = "Unit System",
@@ -184,6 +190,53 @@ fun SettingsScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showThemeDialog) {
+            val options = listOf(
+                "system" to "System default",
+                "light" to "Light",
+                "dark" to "Dark"
+            )
+            AlertDialog(
+                onDismissRequest = { showThemeDialog = false },
+                title = { Text("Choose theme") },
+                text = {
+                    Column {
+                        options.forEach { (mode, label) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.selectThemeMode(mode)
+                                        showThemeDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (themeMode == mode || (mode == "system" && themeMode == null)),
+                                    onClick = {
+                                        viewModel.selectThemeMode(mode)
+                                        showThemeDialog = false
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = label,
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showThemeDialog = false }) {
                         Text("Cancel")
                     }
                 }

@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -88,9 +87,6 @@ fun ProfileScreen(
             TopAppBar(
                 title = { Text(user?.displayName?.lowercase() ?: "profile", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground) },
                 actions = {
-                    IconButton(onClick = { /* TODO: Share */ }) {
-                        Icon(Icons.Outlined.IosShare, contentDescription = "Share", tint = MaterialTheme.colorScheme.onBackground)
-                    }
                     IconButton(onClick = { navController.navigate("edit_profile") }) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onBackground)
                     }
@@ -341,12 +337,23 @@ fun ProfileHeader(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    ProfileStat(count = workoutCount.toString(), label = "Workouts")
-                    ProfileStat(count = routineCount.toString(), label = "Routines")
+                    ProfileStat(
+                        count = workoutCount.toString(), 
+                        label = "Workouts",
+                        modifier = Modifier.weight(1f)
+                    )
+                    ProfileStat(
+                        count = routineCount.toString(), 
+                        label = "Routines",
+                        modifier = Modifier.weight(1f)
+                    )
                     ProfileStat(
                         count = followersCount.toString(), 
                         label = "Followers",
-                        modifier = Modifier.clickable { onFollowersClick() }
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onFollowersClick() }
                     )
                 }
             }

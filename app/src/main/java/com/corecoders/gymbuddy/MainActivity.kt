@@ -41,13 +41,17 @@ class MainActivity : ComponentActivity() {
                 factory = SettingsViewModelFactory(userPreferences)
             )
             val isSystemDark = isSystemInDarkTheme()
-            val darkModeOpt by settingsViewModel.darkMode.collectAsState()
-            val activeTheme = darkModeOpt ?: isSystemDark
+            val themeMode by settingsViewModel.themeMode.collectAsState()
+            val activeTheme = when (themeMode) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemDark
+            }
 
             GymBuddyTheme(darkTheme = activeTheme) {
                 val onboardingCompleted by userPreferences.onboardingCompletedFlow.collectAsState(initial = null)
                 val auth = Firebase.auth
-                if (darkModeOpt == null || (auth.currentUser != null && onboardingCompleted == null)) {
+                if (themeMode == null || (auth.currentUser != null && onboardingCompleted == null)) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

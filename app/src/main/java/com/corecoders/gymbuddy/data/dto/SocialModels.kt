@@ -34,3 +34,26 @@ data class SocialPostDto(
     val comments: Int = 0,
     val clappedBy: List<String> = emptyList()
 )
+
+data class Comment(
+    val commentId: String = "",
+    val postId: String = "",
+    val userId: String = "",
+    val username: String = "",
+    val userAvatar: String = "",
+    val text: String = "",
+    val timestamp: Long = 0L
+)
+
+data class NotificationDto(
+    val notificationId: String = "",
+    val recipientUserId: String = "",
+    val senderUserId: String = "",
+    val senderUsername: String = "",
+    val senderAvatar: String = "",
+    val type: String = "", // "CLAP", "FOLLOW", "COMMENT"
+    val postId: String = "",
+    val postWorkoutName: String = "",
+    val timestamp: Long = 0L,
+    val read: Boolean = false
+)

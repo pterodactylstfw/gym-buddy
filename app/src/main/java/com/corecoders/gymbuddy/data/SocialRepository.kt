@@ -155,6 +155,13 @@ class SocialRepository {
             if (!updatedFriends.contains(friendId)) {
                 updatedFriends.add(friendId)
                 docRef.update("friends", updatedFriends).await()
+                
+                // Trigger follower notification
+                createNotification(
+                    recipientUserId = friendId,
+                    senderUserId = currentUserId,
+                    type = "FOLLOW"
+                )
             }
             
             true
@@ -290,6 +297,7 @@ class SocialRepository {
             
             val clappedBy = post.clappedBy.toMutableList()
             var claps = post.claps
+            var isClapping = false
             
             if (clappedBy.contains(currentUserId)) {
                 clappedBy.remove(currentUserId)
@@ -297,6 +305,7 @@ class SocialRepository {
             } else {
                 clappedBy.add(currentUserId)
                 claps += 1
+                isClapping = true
             }
             
             docRef.update(
@@ -305,9 +314,148 @@ class SocialRepository {
                     "claps" to claps
                 )
             ).await()
+            
+            if (isClapping && post.userId != currentUserId) {
+                createNotification(
+                    recipientUserId = post.userId,
+                    senderUserId = currentUserId,
+                    type = "CLAP",
+                    postId = postId,
+                    postWorkoutName = post.workoutName
+                )
+            }
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    suspend fun createNotification(
+        recipientUserId: String,
+        senderUserId: String,
+        type: String,
+        postId: String = "",
+        postWorkoutName: String = ""
+    ): Boolean {
+        if (recipientUserId == senderUserId) return true
+        return try {
+            val senderProfile = getUserProfile(senderUserId) ?: return false
+            val notifRef = firestore.collection("users")
+                .document(recipientUserId)
+                .collection("notifications")
+                .document()
+            
+            val notification = com.corecoders.gymbuddy.data.dto.NotificationDto(
+                notificationId = notifRef.id,
+                recipientUserId = recipientUserId,
+                senderUserId = senderUserId,
+                senderUsername = senderProfile.username,
+                senderAvatar = senderProfile.avatarUri,
+                type = type,
+                postId = postId,
+                postWorkoutName = postWorkoutName,
+                timestamp = System.currentTimeMillis(),
+                read = false
+            )
+            notifRef.set(notification).await()
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error creating notification", e)
+            false
+        }
+    }
+
+    suspend fun getNotifications(): List<com.corecoders.gymbuddy.data.dto.NotificationDto> {
+        val currentUserId = getCurrentUserId() ?: return emptyList()
+        return try {
+            val result = firestore.collection("users")
+                .document(currentUserId)
+                .collection("notifications")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            result.toObjects(com.corecoders.gymbuddy.data.dto.NotificationDto::class.java)
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error getting notifications", e)
+            emptyList()
+        }
+    }
+
+    suspend fun markNotificationsAsRead(): Boolean {
+        val currentUserId = getCurrentUserId() ?: return false
+        return try {
+            val unreadNotifs = firestore.collection("users")
+                .document(currentUserId)
+                .collection("notifications")
+                .whereEqualTo("read", false)
+                .get()
+                .await()
+                
+            if (!unreadNotifs.isEmpty) {
+                firestore.runBatch { batch ->
+                    for (doc in unreadNotifs.documents) {
+                        batch.update(doc.reference, "read", true)
+                    }
+                }.await()
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error marking notifications as read", e)
+            false
+        }
+    }
+
+    suspend fun addComment(postId: String, text: String): Boolean {
+        val currentUserId = getCurrentUserId() ?: return false
+        val profile = getUserProfile(currentUserId) ?: return false
+        
+        return try {
+            val postRef = firestore.collection("posts").document(postId)
+            val postDoc = postRef.get().await()
+            val post = postDoc.toObject(SocialPostDto::class.java) ?: return false
+            
+            val commentsRef = postRef.collection("comments").document()
+            val comment = com.corecoders.gymbuddy.data.dto.Comment(
+                commentId = commentsRef.id,
+                postId = postId,
+                userId = currentUserId,
+                username = profile.username,
+                userAvatar = profile.avatarUri,
+                text = text,
+                timestamp = System.currentTimeMillis()
+            )
+            
+            commentsRef.set(comment).await()
+            postRef.update("comments", post.comments + 1).await()
+            
+            if (post.userId != currentUserId) {
+                createNotification(
+                    recipientUserId = post.userId,
+                    senderUserId = currentUserId,
+                    type = "COMMENT",
+                    postId = postId,
+                    postWorkoutName = post.workoutName
+                )
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error adding comment", e)
+            false
+        }
+    }
+
+    suspend fun getComments(postId: String): List<com.corecoders.gymbuddy.data.dto.Comment> {
+        return try {
+            val result = firestore.collection("posts")
+                .document(postId)
+                .collection("comments")
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .get()
+                .await()
+            result.toObjects(com.corecoders.gymbuddy.data.dto.Comment::class.java)
+        } catch (e: Exception) {
+            Log.e("SocialRepository", "Error getting comments", e)
+            emptyList()
         }
     }
 }

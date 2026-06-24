@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +24,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.corecoders.gymbuddy.viewmodel.SocialViewModel
 import androidx.navigation.NavController
 import com.corecoders.gymbuddy.data.Exercise
 import com.corecoders.gymbuddy.data.Routine
@@ -63,12 +64,16 @@ fun DashboardScreen(
     workoutViewModel: WorkoutViewModel,
     routinesViewModel: RoutinesViewModel,
     onStartWorkout: () -> Unit,
-    onStartRoutine: (Routine, List<Exercise>) -> Unit
+    onStartRoutine: (Routine, List<Exercise>) -> Unit,
+    socialViewModel: SocialViewModel = viewModel()
 ) {
     val auth = Firebase.auth
     val scrollState = rememberScrollState()
     val weeklyDays by workoutViewModel.weeklyAttendanceDays.collectAsState()
     val routines by routinesViewModel.allRoutines.collectAsState()
+
+    val unreadCount by socialViewModel.unreadNotificationsCount.collectAsState()
+    var showNotificationsSheet by remember { mutableStateOf(false) }
 
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {
@@ -110,18 +115,22 @@ fun DashboardScreen(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    IconButton(onClick = { /* TODO */ }) {
+                IconButton(onClick = { showNotificationsSheet = true }) {
+                    BadgedBox(
+                        badge = {
+                            if (unreadCount > 0) {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ) {
+                                    Text("$unreadCount")
+                                }
+                            }
+                        }
+                    ) {
                         Icon(
                             Icons.Outlined.Notifications,
                             contentDescription = "Notifications",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(
-                            Icons.Outlined.ChatBubbleOutline,
-                            contentDescription = "Chat",
                             tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -328,6 +337,13 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
         }
+    }
+
+    if (showNotificationsSheet) {
+        NotificationsBottomSheet(
+            socialViewModel = socialViewModel,
+            onDismissRequest = { showNotificationsSheet = false }
+        )
     }
 }
 

@@ -11,12 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +26,6 @@ import androidx.navigation.NavController
 import com.corecoders.gymbuddy.data.dto.SocialPostDto
 import com.corecoders.gymbuddy.viewmodel.SocialViewModel
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.utils.getAvatarModel
@@ -42,6 +37,7 @@ fun SocialScreen(
     viewModel: SocialViewModel = viewModel()
 ) {
     val feedPosts by viewModel.feedPosts.collectAsState()
+    var activeCommentsPostId by remember { mutableStateOf<String?>(null) }
     val isLoading by viewModel.isLoading.collectAsState()
 
     LaunchedEffect(Unit) {
@@ -90,17 +86,31 @@ fun SocialScreen(
                     SocialActivityCard(
                         post = post, 
                         onClapClick = { viewModel.toggleClap(post.postId) },
-                        onUserClick = { navController.navigate("other_user_profile/${post.userId}") }
+                        onUserClick = { navController.navigate("other_user_profile/${post.userId}") },
+                        onCommentsClick = { activeCommentsPostId = post.postId }
                     )
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }
             }
         }
     }
+
+    activeCommentsPostId?.let { postId ->
+        CommentsBottomSheet(
+            postId = postId,
+            socialViewModel = viewModel,
+            onDismissRequest = { activeCommentsPostId = null }
+        )
+    }
 }
 
 @Composable
-fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit, onUserClick: () -> Unit = {}) {
+fun SocialActivityCard(
+    post: SocialPostDto,
+    onClapClick: () -> Unit,
+    onUserClick: () -> Unit = {},
+    onCommentsClick: () -> Unit = {}
+) {
     val timeAgo = DateUtils.getRelativeTimeSpanString(post.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     val hasClapped = post.clappedBy.contains(currentUserId)
@@ -206,17 +216,8 @@ fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit, onUserClick
                     icon = Icons.Outlined.ChatBubbleOutline, 
                     count = "${post.comments}",
                     isActive = false,
-                    onClick = {} // Not implemented yet
+                    onClick = onCommentsClick
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { /* TODO Share */ }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Share, 
-                        contentDescription = "Share", 
-                        tint = MaterialTheme.colorScheme.secondary, 
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
         }
     }

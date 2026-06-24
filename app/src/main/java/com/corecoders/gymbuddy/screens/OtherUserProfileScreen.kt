@@ -28,6 +28,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.data.dto.UserProfile
 import com.corecoders.gymbuddy.viewmodel.OtherUserProfileViewModel
+import com.corecoders.gymbuddy.viewmodel.SocialViewModel
 import java.io.File
 import com.corecoders.gymbuddy.utils.getAvatarModel
 
@@ -36,7 +37,8 @@ import com.corecoders.gymbuddy.utils.getAvatarModel
 fun OtherUserProfileScreen(
     navController: NavController,
     userId: String,
-    viewModel: OtherUserProfileViewModel = viewModel()
+    viewModel: OtherUserProfileViewModel = viewModel(),
+    socialViewModel: SocialViewModel = viewModel()
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
     val posts by viewModel.posts.collectAsState()
@@ -44,6 +46,7 @@ fun OtherUserProfileScreen(
     val following by viewModel.following.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val currentUserProfile by viewModel.currentUserProfile.collectAsState()
+    var activeCommentsPostId by remember { mutableStateOf<String?>(null) }
 
     var showSocialList by remember { mutableStateOf(false) }
     var selectedSocialTabIndex by remember { mutableIntStateOf(0) }
@@ -126,22 +129,32 @@ fun OtherUserProfileScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                ProfileStat(count = posts.size.toString(), label = "Workouts")
+                                ProfileStat(
+                                    count = posts.size.toString(), 
+                                    label = "Workouts",
+                                    modifier = Modifier.weight(1f)
+                                )
                                 ProfileStat(
                                     count = followers.size.toString(), 
                                     label = "Followers",
-                                    modifier = Modifier.clickable { 
-                                        selectedSocialTabIndex = 0
-                                        showSocialList = true 
-                                    }
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { 
+                                            selectedSocialTabIndex = 0
+                                            showSocialList = true 
+                                        }
                                 )
                                 ProfileStat(
                                     count = following.size.toString(), 
                                     label = "Following",
-                                    modifier = Modifier.clickable { 
-                                        selectedSocialTabIndex = 1
-                                        showSocialList = true 
-                                    }
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { 
+                                            selectedSocialTabIndex = 1
+                                            showSocialList = true
+                                        }
                                 )
                             }
                         }
@@ -202,7 +215,11 @@ fun OtherUserProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(posts) { post ->
-                            SocialActivityCard(post, onClapClick = { viewModel.toggleClap(post.postId) })
+                            SocialActivityCard(
+                                post = post, 
+                                onClapClick = { viewModel.toggleClap(post.postId) },
+                                onCommentsClick = { activeCommentsPostId = post.postId }
+                            )
                         }
                     }
                 }
@@ -285,6 +302,14 @@ fun OtherUserProfileScreen(
                 }
             }
         }
+    }
+
+    activeCommentsPostId?.let { postId ->
+        CommentsBottomSheet(
+            postId = postId,
+            socialViewModel = socialViewModel,
+            onDismissRequest = { activeCommentsPostId = null }
+        )
     }
 }
 
