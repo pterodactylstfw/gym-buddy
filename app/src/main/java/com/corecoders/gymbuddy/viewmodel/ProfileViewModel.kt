@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import com.corecoders.gymbuddy.data.AuthManager
+import com.corecoders.gymbuddy.data.dto.UserProfile
 
 class ProfileViewModel(
     private val database: com.corecoders.gymbuddy.data.AppDatabase,
@@ -27,10 +28,16 @@ class ProfileViewModel(
 
     init {
         viewModelScope.launch {
-            kotlinx.coroutines.withContext(Dispatchers.IO) {
-                if (currentUserId.isNotEmpty()) {
-                    workoutDao.assignOrphanWorkouts(currentUserId)
-                    routineDao.assignOrphanRoutines(currentUserId)
+            AuthManager.currentUserIdFlow().collect { uid ->
+                if (uid.isNotEmpty()) {
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        workoutDao.assignOrphanWorkouts(uid)
+                        routineDao.assignOrphanRoutines(uid)
+                    }
+                    loadFollowers()
+                } else {
+                    _followers.value = emptyList()
+                    _following.value = emptyList()
                 }
             }
         }
@@ -69,6 +76,20 @@ class ProfileViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 0.0
     )
+
+    private val _followers = MutableStateFlow<List<UserProfile>>(emptyList())
+    val followers = _followers.asStateFlow()
+
+    private val _following = MutableStateFlow<List<UserProfile>>(emptyList())
+    val following = _following.asStateFlow()
+
+    fun loadFollowers() {
+        viewModelScope.launch {
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            _followers.value = repository.getFollowers()
+            _following.value = repository.getFollowing()
+        }
+    }
 
     val age = userPreferences.ageFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)
     val weight = userPreferences.weightFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0f)

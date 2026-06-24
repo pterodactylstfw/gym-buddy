@@ -67,6 +67,11 @@ fun ProfileScreen(
     val experience by viewModel.experienceLevel.collectAsState()
     val profilePictureUri by viewModel.profilePictureUri.collectAsState()
 
+    val followers by viewModel.followers.collectAsState()
+    val following by viewModel.following.collectAsState()
+    var showFollowersList by remember { mutableStateOf(false) }
+    var selectedSocialTabIndex by remember { mutableIntStateOf(0) }
+
     var showPhotoMenu by remember { mutableStateOf(false) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -117,8 +122,10 @@ fun ProfileScreen(
                 subtitle = subtitle, 
                 workoutCount = totalWorkouts, 
                 routineCount = routines.size,
+                followersCount = followers.size,
                 profilePictureUri = profilePictureUri,
-                onPhotoClick = { showPhotoMenu = true }
+                onPhotoClick = { showPhotoMenu = true },
+                onFollowersClick = { showFollowersList = true }
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -165,6 +172,78 @@ fun ProfileScreen(
 
 
 
+        if (showFollowersList) {
+            val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ModalBottomSheet(
+                onDismissRequest = { showFollowersList = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                sheetState = sheetState
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).padding(bottom = 32.dp)) {
+                    TabRow(
+                        selectedTabIndex = selectedSocialTabIndex,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        indicator = { tabPositions ->
+                            if (selectedSocialTabIndex < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedSocialTabIndex]),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    height = 2.dp
+                                )
+                            }
+                        },
+                        divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp) }
+                    ) {
+                        Tab(
+                            selected = selectedSocialTabIndex == 0,
+                            onClick = { selectedSocialTabIndex = 0 },
+                            text = { Text("Followers", color = if (selectedSocialTabIndex == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary) }
+                        )
+                        Tab(
+                            selected = selectedSocialTabIndex == 1,
+                            onClick = { selectedSocialTabIndex = 1 },
+                            text = { Text("Following", color = if (selectedSocialTabIndex == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary) }
+                        )
+                    }
+                    
+                    val currentList = if (selectedSocialTabIndex == 0) followers else following
+                    val emptyMessage = if (selectedSocialTabIndex == 0) "No followers yet." else "You are not following anyone yet."
+
+                    if (currentList.isEmpty()) {
+                        Text(
+                            text = emptyMessage,
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    } else {
+                        LazyColumn {
+                            items(currentList) { user ->
+                                ListItem(
+                                    headlineContent = { Text(user.name, fontWeight = FontWeight.Bold) },
+                                    supportingContent = { Text("@${user.username}") },
+                                    leadingContent = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (user.name.isNotEmpty()) user.name.take(1).uppercase() else "?",
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (showPhotoMenu) {
             ModalBottomSheet(
                 onDismissRequest = { showPhotoMenu = false },
@@ -208,8 +287,10 @@ fun ProfileHeader(
     subtitle: String, 
     workoutCount: Int, 
     routineCount: Int,
+    followersCount: Int,
     profilePictureUri: String,
-    onPhotoClick: () -> Unit
+    onPhotoClick: () -> Unit,
+    onFollowersClick: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,7 +337,11 @@ fun ProfileHeader(
                 ) {
                     ProfileStat(count = workoutCount.toString(), label = "Workouts")
                     ProfileStat(count = routineCount.toString(), label = "Routines")
-                    ProfileStat(count = "0", label = "Followers")
+                    ProfileStat(
+                        count = followersCount.toString(), 
+                        label = "Followers",
+                        modifier = Modifier.clickable { onFollowersClick() }
+                    )
                 }
             }
         }
@@ -271,8 +356,8 @@ fun ProfileHeader(
 }
 
 @Composable
-fun ProfileStat(count: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun ProfileStat(count: String, label: String, modifier: Modifier = Modifier) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
         Text(text = count, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
         Text(text = label, color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.labelSmall, fontSize = 10.sp)
     }

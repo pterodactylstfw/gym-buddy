@@ -155,18 +155,6 @@ class SocialRepository {
                 docRef.update("friends", updatedFriends).await()
             }
             
-            // Make friendship mutual
-            val friendDocRef = firestore.collection("users").document(friendId)
-            val friendDoc = friendDocRef.get().await()
-            val friendProfile = friendDoc.toObject(UserProfile::class.java)
-            if (friendProfile != null) {
-                val friendUpdatedFriends = friendProfile.friends.toMutableList()
-                if (!friendUpdatedFriends.contains(currentUserId)) {
-                    friendUpdatedFriends.add(currentUserId)
-                    friendDocRef.update("friends", friendUpdatedFriends).await()
-                }
-            }
-            
             true
         } catch (e: Exception) {
             false
@@ -186,22 +174,45 @@ class SocialRepository {
                  docRef.update("friends", updatedFriends).await()
              }
              
-             // Mutually remove friend
-             val friendDocRef = firestore.collection("users").document(friendId)
-             val friendDoc = friendDocRef.get().await()
-             val friendProfile = friendDoc.toObject(UserProfile::class.java)
-             if (friendProfile != null) {
-                 val friendUpdatedFriends = friendProfile.friends.toMutableList()
-                 if (friendUpdatedFriends.contains(currentUserId)) {
-                     friendUpdatedFriends.remove(currentUserId)
-                     friendDocRef.update("friends", friendUpdatedFriends).await()
-                 }
-             }
-             
              true
          } catch (e: Exception) {
              false
          }
+    }
+    
+    suspend fun getFollowers(): List<UserProfile> {
+        val currentUserId = getCurrentUserId() ?: return emptyList()
+        return try {
+            val result = firestore.collection("users")
+                .whereArrayContains("friends", currentUserId)
+                .get()
+                .await()
+            result.toObjects(UserProfile::class.java)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    suspend fun getFollowing(): List<UserProfile> {
+        val currentUserId = getCurrentUserId() ?: return emptyList()
+        return try {
+            val doc = firestore.collection("users").document(currentUserId).get().await()
+            val profile = doc.toObject(UserProfile::class.java) ?: return emptyList()
+            val friendIds = profile.friends
+            
+            if (friendIds.isEmpty()) return emptyList()
+            
+            val followingList = mutableListOf<UserProfile>()
+            for (id in friendIds) {
+                val friendDoc = firestore.collection("users").document(id).get().await()
+                friendDoc.toObject(UserProfile::class.java)?.let {
+                    followingList.add(it)
+                }
+            }
+            followingList
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
     
     suspend fun publishPost(workoutName: String, stats: String, exercises: List<String>): Boolean {
