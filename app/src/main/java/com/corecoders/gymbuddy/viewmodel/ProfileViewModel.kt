@@ -159,14 +159,33 @@ class ProfileViewModel(
         viewModelScope.launch {
             try {
                 val inputStream = context.contentResolver.openInputStream(uri)
-                val file = java.io.File(context.filesDir, "profile_pic_${System.currentTimeMillis()}.jpg")
-                val outputStream = java.io.FileOutputStream(file)
-                inputStream?.copyTo(outputStream)
+                val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
                 inputStream?.close()
-                outputStream.close()
-                userPreferences.updateProfilePictureUri(file.absolutePath)
-                val repository = com.corecoders.gymbuddy.data.SocialRepository()
-                repository.updateAvatarUri(file.absolutePath)
+                
+                if (originalBitmap != null) {
+                    val maxDimension = 300
+                    val width = originalBitmap.width
+                    val height = originalBitmap.height
+                    val newWidth: Int
+                    val newHeight: Int
+                    if (width > height) {
+                        newWidth = maxDimension
+                        newHeight = (height * maxDimension) / width
+                    } else {
+                        newHeight = maxDimension
+                        newWidth = (width * maxDimension) / height
+                    }
+                    val resizedBitmap = android.graphics.Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+                    
+                    val outputStream = java.io.ByteArrayOutputStream()
+                    resizedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
+                    val byteArray = outputStream.toByteArray()
+                    val base64String = "data:image/jpeg;base64," + android.util.Base64.encodeToString(byteArray, android.util.Base64.NO_WRAP)
+                    
+                    userPreferences.updateProfilePictureUri(base64String)
+                    val repository = com.corecoders.gymbuddy.data.SocialRepository()
+                    repository.updateAvatarUri(base64String)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }

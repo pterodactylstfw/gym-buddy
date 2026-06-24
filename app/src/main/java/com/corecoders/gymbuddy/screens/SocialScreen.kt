@@ -30,6 +30,10 @@ import androidx.navigation.NavController
 import com.corecoders.gymbuddy.data.dto.SocialPostDto
 import com.corecoders.gymbuddy.viewmodel.SocialViewModel
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.corecoders.gymbuddy.utils.getAvatarModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +119,7 @@ fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit, onUserClick
                     .fillMaxWidth()
                     .clickable { onUserClick() }
             ) {
+                val avatarModel = remember(post.userAvatar) { getAvatarModel(post.userAvatar) }
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -122,7 +127,17 @@ fun SocialActivityCard(post: SocialPostDto, onClapClick: () -> Unit, onUserClick
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(post.userAvatar, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    if (avatarModel != null) {
+                        AsyncImage(
+                            model = avatarModel,
+                            contentDescription = "User Avatar",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        val textToShow = post.userAvatar.takeIf { it.length == 1 } ?: post.username.take(1).uppercase()
+                        Text(textToShow, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {

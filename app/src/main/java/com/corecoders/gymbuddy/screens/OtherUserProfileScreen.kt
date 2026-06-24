@@ -29,6 +29,7 @@ import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.data.dto.UserProfile
 import com.corecoders.gymbuddy.viewmodel.OtherUserProfileViewModel
 import java.io.File
+import com.corecoders.gymbuddy.utils.getAvatarModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,9 +94,10 @@ fun OtherUserProfileScreen(
                                 .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (user.avatarUri.isNotEmpty() && File(user.avatarUri).exists()) {
+                            val avatarModel = remember(user.avatarUri) { getAvatarModel(user.avatarUri) }
+                            if (avatarModel != null) {
                                 AsyncImage(
-                                    model = File(user.avatarUri),
+                                    model = avatarModel,
                                     contentDescription = "Profile Picture",
                                     modifier = Modifier.fillMaxSize().clip(CircleShape),
                                     contentScale = ContentScale.Crop

@@ -239,7 +239,7 @@ class SocialRepository {
             postId = newDocRef.id,
             userId = currentUserId,
             username = profile.username,
-            userAvatar = profile.name.take(1).uppercase(), // fallback avatar
+            userAvatar = profile.avatarUri,
             workoutName = workoutName,
             timestamp = System.currentTimeMillis(),
             stats = stats,

@@ -31,6 +31,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import java.io.File
+import com.corecoders.gymbuddy.utils.getAvatarModel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -270,7 +271,7 @@ fun ProfileScreen(
                             photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         }
                     )
-                    if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                    if (profilePictureUri.isNotEmpty()) {
                         ListItem(
                             headlineContent = { Text("Remove Photo", color = MaterialTheme.colorScheme.error) },
                             modifier = Modifier.clickable {
@@ -308,9 +309,10 @@ fun ProfileHeader(
                     .clickable { onPhotoClick() },
                 contentAlignment = Alignment.Center
             ) {
-                if (profilePictureUri.isNotEmpty() && File(profilePictureUri).exists()) {
+                val avatarModel = remember(profilePictureUri) { getAvatarModel(profilePictureUri) }
+                if (avatarModel != null) {
                     AsyncImage(
-                        model = File(profilePictureUri),
+                        model = avatarModel,
                         contentDescription = "Profile Picture",
                         modifier = Modifier.fillMaxSize().clip(CircleShape),
                         contentScale = ContentScale.Crop

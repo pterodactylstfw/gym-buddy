@@ -104,6 +104,7 @@ class MainActivity : ComponentActivity() {
                                 muscleMass = profile.muscleMass,
                                 waistSize = profile.waistSize
                             )
+                            userPreferences.updateProfilePictureUri(profile.avatarUri)
                             userPreferences.updateOnboardingCompleted(profile.onboardingCompleted)
                         } else {
                             userPreferences.updateOnboardingCompleted(false)
@@ -177,6 +178,7 @@ class MainActivity : ComponentActivity() {
                                                     muscleMass = profile.muscleMass,
                                                     waistSize = profile.waistSize
                                                 )
+                                                userPreferences.updateProfilePictureUri(profile.avatarUri)
                                                 userPreferences.updateOnboardingCompleted(profile.onboardingCompleted)
                                                 
                                                 if (profile.onboardingCompleted) {
