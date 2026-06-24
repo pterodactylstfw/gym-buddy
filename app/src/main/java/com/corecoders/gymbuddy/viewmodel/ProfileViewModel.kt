@@ -34,10 +34,6 @@ class ProfileViewModel(
                         workoutDao.assignOrphanWorkouts(uid)
                         routineDao.assignOrphanRoutines(uid)
                     }
-                    loadFollowers()
-                } else {
-                    _followers.value = emptyList()
-                    _following.value = emptyList()
                 }
             }
         }
@@ -77,18 +73,34 @@ class ProfileViewModel(
         initialValue = 0.0
     )
 
-    private val _followers = MutableStateFlow<List<UserProfile>>(emptyList())
-    val followers = _followers.asStateFlow()
+    val followers: StateFlow<List<UserProfile>> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        if (userId.isNotEmpty()) {
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            repository.getFollowersFlow(userId)
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
-    private val _following = MutableStateFlow<List<UserProfile>>(emptyList())
-    val following = _following.asStateFlow()
+    val following: StateFlow<List<UserProfile>> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+        if (userId.isNotEmpty()) {
+            val repository = com.corecoders.gymbuddy.data.SocialRepository()
+            repository.getFollowingFlow(userId)
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     fun loadFollowers() {
-        viewModelScope.launch {
-            val repository = com.corecoders.gymbuddy.data.SocialRepository()
-            _followers.value = repository.getFollowers()
-            _following.value = repository.getFollowing()
-        }
+        // Handled automatically via Firestore snapshot flow
     }
 
     val age = userPreferences.ageFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 0)

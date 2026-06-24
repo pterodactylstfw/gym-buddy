@@ -154,7 +154,11 @@ fun WorkoutSummaryScreen(
                             if (success) {
                                 Toast.makeText(context, "Shared to Feed!", Toast.LENGTH_SHORT).show()
                                 navController.navigate(BottomNavItem.Social.route) {
-                                    popUpTo(BottomNavItem.Dashboard.route) { inclusive = false }
+                                    popUpTo(BottomNavItem.Dashboard.route) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
                             } else {
                                 Toast.makeText(context, "Failed to share.", Toast.LENGTH_SHORT).show()

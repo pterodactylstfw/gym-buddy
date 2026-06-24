@@ -7,6 +7,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.launch
 
 class SocialRepository {
     private val firestore = FirebaseFirestore.getInstance()
@@ -456,6 +460,105 @@ class SocialRepository {
         } catch (e: Exception) {
             Log.e("SocialRepository", "Error getting comments", e)
             emptyList()
+        }
+    }
+
+    fun getFollowersFlow(targetUserId: String? = null): Flow<List<UserProfile>> = callbackFlow {
+        val uid = targetUserId ?: getCurrentUserId()
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        
+        val listener = firestore.collection("users")
+            .whereArrayContains("friends", uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("SocialRepository", "Error listening to followers", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val followersList = snapshot.toObjects(UserProfile::class.java)
+                    trySend(followersList)
+                }
+            }
+            
+        awaitClose {
+            listener.remove()
+        }
+    }
+
+    fun getFollowingFlow(targetUserId: String? = null): Flow<List<UserProfile>> = callbackFlow {
+        val uid = targetUserId ?: getCurrentUserId()
+        if (uid == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        
+        val listener = firestore.collection("users")
+            .document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("SocialRepository", "Error listening to following", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val profile = snapshot.toObject(UserProfile::class.java)
+                    val friendIds = profile?.friends ?: emptyList()
+                    
+                    if (friendIds.isEmpty()) {
+                        trySend(emptyList())
+                    } else {
+                        launch {
+                            try {
+                                val followingList = mutableListOf<UserProfile>()
+                                for (id in friendIds) {
+                                    val friendDoc = firestore.collection("users").document(id).get().await()
+                                    friendDoc.toObject(UserProfile::class.java)?.let {
+                                        followingList.add(it)
+                                    }
+                                }
+                                trySend(followingList)
+                            } catch (e: Exception) {
+                                Log.e("SocialRepository", "Error fetching following profiles", e)
+                            }
+                        }
+                    }
+                }
+            }
+            
+        awaitClose {
+            listener.remove()
+        }
+    }
+
+    fun getNotificationsFlow(): Flow<List<com.corecoders.gymbuddy.data.dto.NotificationDto>> = callbackFlow {
+        val currentUserId = getCurrentUserId()
+        if (currentUserId == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        
+        val listener = firestore.collection("users")
+            .document(currentUserId)
+            .collection("notifications")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("SocialRepository", "Error listening to notifications", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val notificationsList = snapshot.toObjects(com.corecoders.gymbuddy.data.dto.NotificationDto::class.java)
+                    trySend(notificationsList)
+                }
+            }
+            
+        awaitClose {
+            listener.remove()
         }
     }
 }

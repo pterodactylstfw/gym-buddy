@@ -5,11 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.corecoders.gymbuddy.data.SocialRepository
 import com.corecoders.gymbuddy.data.dto.SocialPostDto
 import com.corecoders.gymbuddy.data.dto.UserProfile
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class SocialViewModel : ViewModel() {
@@ -43,11 +39,15 @@ class SocialViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            com.corecoders.gymbuddy.data.AuthManager.currentUserIdFlow().collect { uid ->
+            com.corecoders.gymbuddy.data.AuthManager.currentUserIdFlow().collectLatest { uid ->
                 if (uid.isNotEmpty()) {
                     loadCurrentUserProfile()
                     loadFeed()
-                    loadNotifications()
+                    
+                    // Listen to notifications in real-time
+                    repository.getNotificationsFlow().collect { list ->
+                        _notifications.value = list
+                    }
                 } else {
                     _currentUserProfile.value = null
                     _feedPosts.value = emptyList()
