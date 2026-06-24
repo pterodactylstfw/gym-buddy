@@ -11,10 +11,10 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val userPreferences: UserPreferences) : ViewModel() {
 
-    val darkMode: StateFlow<Boolean> = userPreferences.darkModeFlow.stateIn(
+    val darkMode: StateFlow<Boolean?> = userPreferences.darkModeFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = true
+        initialValue = null
     )
 
     val unitSystemMetric: StateFlow<Boolean> = userPreferences.unitSystemMetricFlow.stateIn(

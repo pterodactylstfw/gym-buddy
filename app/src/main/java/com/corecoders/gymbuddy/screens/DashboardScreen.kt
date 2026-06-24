@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +33,29 @@ import com.corecoders.gymbuddy.viewmodel.WorkoutViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import java.util.Calendar
+
+@Composable
+fun ShimmerPlaceholder(
+    modifier: Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+    Box(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = alpha),
+                shape = RoundedCornerShape(4.dp)
+            )
+    )
+}
 
 @Composable
 fun DashboardScreen(
@@ -124,38 +148,60 @@ fun DashboardScreen(
                         letterSpacing = 1.sp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
+                    if (weeklyDays == null) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ShimmerPlaceholder(
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(48.dp)
+                            )
+                            ShimmerPlaceholder(
+                                modifier = Modifier
+                                    .width(180.dp)
+                                    .height(18.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ShimmerPlaceholder(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(12.dp)
+                                    .clip(CircleShape)
+                            )
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = "$weeklyDays",
+                                fontSize = 48.sp,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = " / 7",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                            )
+                        }
                         Text(
-                            text = "$weeklyDays",
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "days trained this week",
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = " / 7",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        // Progress Bar
+                        LinearProgressIndicator(
+                            progress = { weeklyDays!! / 7f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(12.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                         )
                     }
-                    Text(
-                        text = "days trained this week",
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    // Progress Bar
-                    LinearProgressIndicator(
-                        progress = { weeklyDays / 7f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(12.dp)
-                            .clip(CircleShape),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
                 }
             }
 

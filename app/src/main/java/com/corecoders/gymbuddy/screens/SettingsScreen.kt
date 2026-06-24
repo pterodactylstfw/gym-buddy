@@ -84,7 +84,7 @@ fun SettingsScreen(
                 SettingsSwitchRow(
                     icon = Icons.Outlined.DarkMode,
                     title = "Dark Mode",
-                    checked = darkMode,
+                    checked = darkMode ?: true,
                     onCheckedChange = { viewModel.toggleDarkMode(it) }
                 )
                 Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))

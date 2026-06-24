@@ -51,9 +51,9 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Logica pentru zilele de antrenament din această săptămână
-    val weeklyAttendanceDays: StateFlow<Int> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
+    val weeklyAttendanceDays: StateFlow<Int?> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
         workoutDao.getDistinctWorkoutDaysInRange(getStartOfWeekTimestamp(), userId)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private fun getStartOfWeekTimestamp(): Long {
         val calendar = Calendar.getInstance()

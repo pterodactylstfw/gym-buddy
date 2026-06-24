@@ -18,8 +18,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.data.Exercise
 import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
@@ -28,21 +30,25 @@ import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
 @Composable
 fun ExerciseCatalogScreen(
     viewModel: ExerciseViewModel,
-    onExerciseSelected: (Exercise) -> Unit,
-    onBack: () -> Unit
+    onExerciseSelected: ((Exercise) -> Unit)? = null,
+    onBack: (() -> Unit)? = null
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
+    var selectedExerciseToShow by remember { mutableStateOf<Exercise?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Exercises", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
+                    if (onBack != null) {
+                        TextButton(onClick = onBack) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -105,7 +111,94 @@ fun ExerciseCatalogScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(exercises) { exercise ->
-                    ExerciseItem(exercise = exercise, onClick = onExerciseSelected)
+                    ExerciseItem(
+                        exercise = exercise,
+                        onClick = {
+                            if (onExerciseSelected != null) {
+                                onExerciseSelected(exercise)
+                            } else {
+                                selectedExerciseToShow = it
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Floating Exercise Detail Dialog (Browsing Mode Detail view)
+        selectedExerciseToShow?.let { exercise ->
+            Dialog(onDismissRequest = { selectedExerciseToShow = null }) {
+                Card(
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = exercise.name.uppercase(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        val displayCategory = if (exercise.targetMuscle != "Unknown") {
+                            if (exercise.bodyPart != "Unknown" && exercise.bodyPart != exercise.targetMuscle) {
+                                "${exercise.bodyPart} • ${exercise.targetMuscle}"
+                            } else {
+                                exercise.targetMuscle
+                            }
+                        } else if (exercise.bodyPart != "Unknown") {
+                            exercise.bodyPart
+                        } else {
+                            "Full Body"
+                        }
+
+                        Text(
+                            text = displayCategory,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Imaginea mare a exercitiului (GIF)
+                        AsyncImage(
+                            model = exercise.gifUrl,
+                            contentDescription = exercise.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.background),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Button(
+                                onClick = { selectedExerciseToShow = null },
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth(0.6f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("CLOSE", fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
                 }
             }
         }

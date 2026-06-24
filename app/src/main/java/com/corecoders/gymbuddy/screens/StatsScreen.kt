@@ -106,10 +106,11 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
                     modifier = Modifier.weight(1f)
                 )
                 val goal = if (trainingFrequency > 0) trainingFrequency else 4
+                val weeklyDaysSafe = weeklyDays ?: 0
                 StatCard(
                     title = "WEEKLY GOAL",
-                    value = "$weeklyDays/$goal",
-                    footer = "${(goal - weeklyDays).coerceAtLeast(0)} more to go → ${((weeklyDays.toFloat() / goal.toFloat()) * 100).toInt()}%",
+                    value = if (weeklyDays == null) "--/$goal" else "$weeklyDaysSafe/$goal",
+                    footer = if (weeklyDays == null) "Loading..." else "${(goal - weeklyDaysSafe).coerceAtLeast(0)} more to go → ${((weeklyDaysSafe.toFloat() / goal.toFloat()) * 100).toInt()}%",
                     modifier = Modifier.weight(1f)
                 )
             }

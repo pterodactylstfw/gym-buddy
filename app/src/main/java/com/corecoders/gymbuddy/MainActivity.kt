@@ -4,9 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -37,12 +40,22 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = viewModel(
                 factory = SettingsViewModelFactory(userPreferences)
             )
-            val darkMode by settingsViewModel.darkMode.collectAsState()
+            val isSystemDark = isSystemInDarkTheme()
+            val darkModeOpt by settingsViewModel.darkMode.collectAsState()
+            val activeTheme = darkModeOpt ?: isSystemDark
 
-            GymBuddyTheme(darkTheme = darkMode) {
-                val navController = rememberNavController()
+            GymBuddyTheme(darkTheme = activeTheme) {
+                val onboardingCompleted by userPreferences.onboardingCompletedFlow.collectAsState(initial = null)
                 val auth = Firebase.auth
-                val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
+                if (darkModeOpt == null || (auth.currentUser != null && onboardingCompleted == null)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    )
+                } else {
+                    val navController = rememberNavController()
+                    val database: AppDatabase = AppDatabase.getDatabase(applicationContext)
 
                 // ViewModels
                 val workoutViewModel: WorkoutViewModel = viewModel(
@@ -109,7 +122,11 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val startDestination = if (auth.currentUser != null) BottomNavItem.Dashboard.route else "login"
+                val startDestination = when {
+                    auth.currentUser == null -> "login"
+                    onboardingCompleted == false -> "onboarding"
+                    else -> BottomNavItem.Dashboard.route
+                }
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
@@ -234,6 +251,14 @@ class MainActivity : ComponentActivity() {
                         composable(BottomNavItem.Catalog.route) {
                             ExerciseCatalogScreen(
                                 viewModel = exerciseViewModel,
+                                onExerciseSelected = null,
+                                onBack = null
+                            )
+                        }
+
+                        composable("workout_exercise_selection") {
+                            ExerciseCatalogScreen(
+                                viewModel = exerciseViewModel,
                                 onExerciseSelected = { exercise ->
                                     activeWorkoutViewModel.addExercise(exercise)
                                     navController.popBackStack()
@@ -304,7 +329,7 @@ class MainActivity : ComponentActivity() {
                         composable("active_workout") {
                             ActiveWorkoutScreen(
                                 viewModel = activeWorkoutViewModel,
-                                onAddExerciseClick = { navController.navigate(BottomNavItem.Catalog.route) },
+                                onAddExerciseClick = { navController.navigate("workout_exercise_selection") },
                                 onFinishClick = { workoutId ->
                                     activeWorkoutViewModel.resetWorkout()
                                     if (workoutId != null) {
@@ -355,6 +380,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
                 }
             }
         }
