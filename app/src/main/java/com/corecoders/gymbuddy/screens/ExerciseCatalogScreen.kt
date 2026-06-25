@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -144,8 +145,12 @@ fun ExerciseCatalogScreen(
                     } else {
                         loadingError = "Could not load details"
                     }
+                } catch (e: java.net.UnknownHostException) {
+                    loadingError = "No internet connection. Please check your network and try again."
+                } catch (e: java.io.IOException) {
+                    loadingError = "Connection error. Please try again later."
                 } catch (e: Exception) {
-                    loadingError = e.localizedMessage ?: "Network error"
+                    loadingError = e.localizedMessage ?: "Error loading details."
                 } finally {
                     isLoadingDetail = false
                 }
@@ -226,13 +231,25 @@ fun ExerciseCatalogScreen(
                                     CircularProgressIndicator()
                                 }
                             } else if (loadingError != null) {
-                                Text(
-                                    text = "Error loading details: $loadingError",
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontSize = 14.sp,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(16.dp)
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudOff,
+                                        contentDescription = "Offline",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = loadingError!!,
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontSize = 14.sp,
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             } else if (exerciseDetail != null) {
                                 val detail = exerciseDetail!!
                                 
