@@ -10,18 +10,18 @@ sealed class BottomNavItem(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
-    // 1. Acasă (Dashboard)
+    // dashboard
     object Dashboard : BottomNavItem("dashboard", Icons.Filled.Home, Icons.Outlined.Home)
 
-    // 2. Statistici/Istoric (Tab-ul cu bare din poză)
+    // statistici
     object Stats : BottomNavItem("stats", Icons.Filled.BarChart, Icons.Outlined.BarChart)
 
-    // 3. Catalog Exerciții (Lupa din poză)
+    // catalog exercitii
     object Catalog : BottomNavItem("catalog", Icons.Filled.Search, Icons.Outlined.Search)
 
-    // 4. Social / Feed (Grup de oameni în loc de ShoppingBag)
+    // feed
     object Social : BottomNavItem("social", Icons.Filled.Groups, Icons.Outlined.Groups)
 
-    // 5. Profil (Folosim iconița standard momentan, dar o putem schimba cu poza userului)
+    // profil
     object Profile : BottomNavItem("profile", Icons.Filled.Person, Icons.Outlined.Person)
 }

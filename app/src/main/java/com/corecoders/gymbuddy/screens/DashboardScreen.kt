@@ -94,7 +94,7 @@ fun DashboardScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
-            // --- HEADER ---
+            // header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -139,7 +139,7 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- WEEKLY FREQUENCY CARD (TALL) ---
+            // weekly freq
             Card(
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -216,7 +216,7 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- ROUTINE SHORTCUTS ---
+            // routine shortcuts
             if (routines.isNotEmpty()) {
                 Text(
                     text = "Quick Start",
@@ -240,7 +240,7 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // --- READY TO TRAIN CARD ---
+            // ready to train card
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -290,7 +290,7 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- QUICK ACTIONS ---
+            // quick actions
             Text(
                 text = "Quick Actions",
                 fontSize = 22.sp,

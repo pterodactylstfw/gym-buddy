@@ -1,6 +1,8 @@
 package com.corecoders.gymbuddy.data
 
 import android.util.Log
+import com.corecoders.gymbuddy.data.dto.Comment
+import com.corecoders.gymbuddy.data.dto.NotificationDto
 import com.corecoders.gymbuddy.data.dto.SocialPostDto
 import com.corecoders.gymbuddy.data.dto.UserProfile
 import com.google.firebase.auth.FirebaseAuth
@@ -133,7 +135,7 @@ class SocialRepository {
         return try {
             val currentUserId = getCurrentUserId() ?: return emptyList()
             val lowerQuery = query.lowercase()
-            // We search by username prefix
+            // search by username prefix
             val result = firestore.collection("users")
                 .whereGreaterThanOrEqualTo("username", lowerQuery)
                 .whereLessThanOrEqualTo("username", lowerQuery + "\uf8ff")
@@ -349,7 +351,7 @@ class SocialRepository {
                 .collection("notifications")
                 .document()
             
-            val notification = com.corecoders.gymbuddy.data.dto.NotificationDto(
+            val notification = NotificationDto(
                 notificationId = notifRef.id,
                 recipientUserId = recipientUserId,
                 senderUserId = senderUserId,
@@ -369,7 +371,7 @@ class SocialRepository {
         }
     }
 
-    suspend fun getNotifications(): List<com.corecoders.gymbuddy.data.dto.NotificationDto> {
+    suspend fun getNotifications(): List<NotificationDto> {
         val currentUserId = getCurrentUserId() ?: return emptyList()
         return try {
             val result = firestore.collection("users")
@@ -378,7 +380,7 @@ class SocialRepository {
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .await()
-            result.toObjects(com.corecoders.gymbuddy.data.dto.NotificationDto::class.java)
+            result.toObjects(NotificationDto::class.java)
         } catch (e: Exception) {
             Log.e("SocialRepository", "Error getting notifications", e)
             emptyList()
@@ -419,7 +421,7 @@ class SocialRepository {
             val post = postDoc.toObject(SocialPostDto::class.java) ?: return false
             
             val commentsRef = postRef.collection("comments").document()
-            val comment = com.corecoders.gymbuddy.data.dto.Comment(
+            val comment = Comment(
                 commentId = commentsRef.id,
                 postId = postId,
                 userId = currentUserId,
@@ -448,7 +450,7 @@ class SocialRepository {
         }
     }
 
-    suspend fun getComments(postId: String): List<com.corecoders.gymbuddy.data.dto.Comment> {
+    suspend fun getComments(postId: String): List<Comment> {
         return try {
             val result = firestore.collection("posts")
                 .document(postId)
@@ -456,7 +458,7 @@ class SocialRepository {
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .get()
                 .await()
-            result.toObjects(com.corecoders.gymbuddy.data.dto.Comment::class.java)
+            result.toObjects(Comment::class.java)
         } catch (e: Exception) {
             Log.e("SocialRepository", "Error getting comments", e)
             emptyList()
@@ -534,7 +536,7 @@ class SocialRepository {
         }
     }
 
-    fun getNotificationsFlow(): Flow<List<com.corecoders.gymbuddy.data.dto.NotificationDto>> = callbackFlow {
+    fun getNotificationsFlow(): Flow<List<NotificationDto>> = callbackFlow {
         val currentUserId = getCurrentUserId()
         if (currentUserId == null) {
             trySend(emptyList())
@@ -552,7 +554,7 @@ class SocialRepository {
                     return@addSnapshotListener
                 }
                 if (snapshot != null) {
-                    val notificationsList = snapshot.toObjects(com.corecoders.gymbuddy.data.dto.NotificationDto::class.java)
+                    val notificationsList = snapshot.toObjects(NotificationDto::class.java)
                     trySend(notificationsList)
                 }
             }
@@ -566,11 +568,11 @@ class SocialRepository {
         return try {
             val batch = firestore.batch()
 
-            // 1. Delete user profile document
+            // Delete user profile document
             val userRef = firestore.collection("users").document(userId)
             batch.delete(userRef)
 
-            // 2. Delete posts published by the user
+            // Delete posts published by the user
             val postsResult = firestore.collection("posts")
                 .whereEqualTo("userId", userId)
                 .get()
@@ -579,7 +581,7 @@ class SocialRepository {
                 batch.delete(doc.reference)
             }
 
-            // 3. Remove user ID from any other user's "friends" array
+            // Remove user ID from any other user's "friends" array
             val friendsResult = firestore.collection("users")
                 .whereArrayContains("friends", userId)
                 .get()
@@ -590,7 +592,7 @@ class SocialRepository {
                 batch.update(doc.reference, "friends", updatedFriends)
             }
 
-            // 4. Delete notifications under users/{userId}/notifications
+            // Delete notifications
             val notificationsResult = firestore.collection("users")
                 .document(userId)
                 .collection("notifications")

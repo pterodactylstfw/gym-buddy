@@ -58,7 +58,7 @@ fun WorkoutDetailScreen(workoutId: Int, database: AppDatabase, onBack: () -> Uni
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Convertim map-ul în listă de perechi pentru a evita problemele de inferență în LazyColumn/items
+                // Convertim mapul in lista de perechi
                 val groupedList = groupedSets.toList()
                 
                 items(groupedList.size) { index ->

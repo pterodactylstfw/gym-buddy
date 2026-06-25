@@ -152,7 +152,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Current Weight
+            // Current weight
             OutlinedTextField(
                 value = weight,
                 onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
@@ -165,7 +165,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Target Weight
+            // Target weight
             OutlinedTextField(
                 value = targetWeight,
                 onValueChange = { targetWeight = it.filter { c -> c.isDigit() || c == '.' } },
@@ -191,7 +191,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Fitness Goal Dropdown
+            // Fitness goal dropdown
             ExposedDropdownMenuBox(
                 expanded = goalExpanded,
                 onExpandedChange = { goalExpanded = it }
@@ -224,7 +224,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Experience Level Dropdown
+            // Experience level dropdown
             ExposedDropdownMenuBox(
                 expanded = experienceExpanded,
                 onExpandedChange = { experienceExpanded = it }
@@ -257,7 +257,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Workout Frequency
+            // Workout frequency
             OutlinedTextField(
                 value = frequency,
                 onValueChange = { frequency = it.filter { c -> c.isDigit() } },
@@ -270,7 +270,7 @@ fun EditProfileScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            // Save Changes Button
+            // Save changes button
             Button(
                 onClick = {
                     val parsedAge = age.toIntOrNull() ?: 0

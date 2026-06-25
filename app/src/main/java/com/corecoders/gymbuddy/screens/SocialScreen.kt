@@ -122,7 +122,7 @@ fun SocialActivityCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header: User Info
+            // Header: user info
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -158,7 +158,7 @@ fun SocialActivityCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Workout Content
+            // Workout content
             Text(
                 text = post.workoutName,
                 fontWeight = FontWeight.Black,
@@ -199,7 +199,7 @@ fun SocialActivityCard(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Interaction Bar
+            // Interaction bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,

@@ -60,7 +60,7 @@ fun ExerciseCatalogScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            // 1. Search Bar
+            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -76,7 +76,7 @@ fun ExerciseCatalogScreen(
                 )
             )
 
-            // 2. Filter Chips
+            // Filter
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -104,7 +104,7 @@ fun ExerciseCatalogScreen(
                 }
             }
 
-            // 3. Exercises List
+            // Exercises list
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
@@ -125,7 +125,7 @@ fun ExerciseCatalogScreen(
             }
         }
 
-        // Floating Exercise Detail Dialog (Browsing Mode Detail view)
+        // Floating exercise detail catalog
         selectedExerciseToShow?.let { exercise ->
             Dialog(onDismissRequest = { selectedExerciseToShow = null }) {
                 Card(

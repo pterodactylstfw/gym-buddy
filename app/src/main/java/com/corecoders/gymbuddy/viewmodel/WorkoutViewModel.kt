@@ -50,7 +50,6 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         workoutDao.getMuscleSetCounts(userId)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Logica pentru zilele de antrenament din această săptămână
     val weeklyAttendanceDays: StateFlow<Int?> = AuthManager.currentUserIdFlow().flatMapLatest { userId ->
         workoutDao.getDistinctWorkoutDaysInRange(getStartOfWeekTimestamp(), userId)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -61,8 +60,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         calendar.clear(Calendar.MINUTE)
         calendar.clear(Calendar.SECOND)
         calendar.clear(Calendar.MILLISECOND)
-        
-        // Setăm prima zi a săptămânii (Luni)
+
         calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
         return calendar.timeInMillis
     }

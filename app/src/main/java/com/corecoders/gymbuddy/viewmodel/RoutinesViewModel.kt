@@ -35,8 +35,6 @@ class RoutinesViewModel(
         }
     }
 
-    // --- LOGICĂ PENTRU DETALII RUTINĂ ---
-
     fun getRoutine(routineId: Int): Flow<Routine?> = routineDao.getRoutineById(routineId)
 
     fun getExercisesForRoutine(routineId: Int): Flow<List<Exercise>> {

@@ -21,10 +21,10 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory = _selectedCategory.asStateFlow()
 
-    // Citim mereu baza de date LOCALĂ (Room)[cite: 9]
+    // Citim mereu baza de date locala
     private val localExercises: Flow<List<Exercise>> = exerciseDao.getAllExercises()
 
-    // Combinăm datele locale cu filtrele UI[cite: 9]
+    // Combinam datele locale cu filtrele UI
     val exercises: StateFlow<List<Exercise>> = combine(
         _searchQuery,
         localExercises,
@@ -32,7 +32,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     ) { text, all, category ->
         var filtered = all
 
-        // Filtrare după categorie (dacă e selectat ceva diferit de "All")
+        // Filtrare dupa categorie
         if (!category.isNullOrBlank() && category != "All") {
             filtered = filtered.filter { exercise ->
                 val searchStr = category.lowercase()
@@ -53,7 +53,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
             }
         }
 
-        // Filtrare după text
+        // Filtrare dupa text
         if (text.isNotBlank()) {
             filtered = filtered.filter { it.name.contains(text, ignoreCase = true) }
         }
@@ -62,7 +62,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // La crearea ViewModel-ului, declanșăm descărcarea[cite: 9]
+        // La crearea viewmodelului, declansam descarcarea
         fetchCategories()
         syncExercisesFromApi()
     }
@@ -71,7 +71,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     private fun syncExercisesFromApi() {
         viewModelScope.launch {
             try {
-                // Verificăm dacă avem deja baza de date completă (inclusiv Bench Press care lipsește din primele 200)
+                // Verificam daca avem deja baza de date completa
                 val benchPress = exerciseDao.getExerciseNameById("exr_41n2hxnFMotsXTj3")
                 val existing = exerciseDao.getAllExercises().first()
                 if (existing.size > 50 && benchPress != null) {
@@ -81,7 +81,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
 
                 println("====== Începem descărcarea pe bucăți (Hack pentru a ocoli limitarea API-ului)... ======")
 
-                // Ștergem ce s-a descărcat greșit tura trecută
+                // Stergem ce s-a descarcat
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     exerciseDao.clearExercises()
                 }
@@ -99,7 +99,6 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
                             val response = ApiClient.exerciseApi.searchExercises(query = query, limit = 50)
 
                             val mapped = response.data.map { dto ->
-                                // Mapăm query-ul într-o categorie clară pentru UI
                                 val mappedBodyPart = when (query) {
                                     "UPPER ARMS", "LOWER ARMS" -> "Arms"
                                     "CALVES" -> "Legs"
@@ -110,7 +109,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
                                 Exercise(
                                     id = dto.exerciseId,
                                     name = dto.name.trim().replaceFirstChar { it.uppercase() },
-                                    targetMuscle = "Unknown", // Nu e returnat de search, dar UI-ul îl ignoră acum
+                                    targetMuscle = "Unknown",
                                     bodyPart = mappedBodyPart,
                                     gifUrl = dto.imageUrl
                                 )
@@ -119,7 +118,7 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
                             allDownloadedExercises.addAll(mapped)
                             success = true
 
-                            delay(1500) // Pauză VITALĂ pentru limitările API-ului gratuit
+                            delay(1500)
 
                         } catch (e: Exception) {
                             retries++
@@ -156,7 +155,6 @@ class ExerciseViewModel(private val exerciseDao: ExerciseDao) : ViewModel() {
     }
 }
 
-// Factory-ul rămâne la fel[cite: 9]
 class ExerciseViewModelFactory(private val exerciseDao: ExerciseDao) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ExerciseViewModel::class.java)) {

@@ -90,7 +90,7 @@ fun ActiveWorkoutScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
 
-            // Input pentru numele antrenamentului (Minimalist)
+            // Input pentru numele antrenamentului
             BasicTextField(
                 value = workoutName,
                 onValueChange = { viewModel.updateWorkoutName(it) },
@@ -164,7 +164,6 @@ fun ActiveWorkoutScreen(
                 }
             }
 
-            // Butonul gigant de jos (Modern Red)
             Button(
                 onClick = onAddExerciseClick,
                 modifier = Modifier
@@ -265,7 +264,7 @@ fun ExerciseCard(
         border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Header Exercițiu
+            // Header exercitiu
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = activeExercise.exercise.name.uppercase(),
@@ -282,7 +281,7 @@ fun ExerciseCard(
 
             val isMetric by viewModel.unitSystemMetric.collectAsState()
 
-            // Labels pentru coloane
+            // labels pentru coloane
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 Text("SET", modifier = Modifier.width(36.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text("TYPE", modifier = Modifier.width(44.dp), color = MaterialTheme.colorScheme.secondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -293,7 +292,7 @@ fun ExerciseCard(
                 Spacer(modifier = Modifier.width(40.dp))
             }
 
-            // Rândurile pentru Seturi
+            // randurile pentru seturi
             activeExercise.sets.forEachIndexed { setIndex, activeSet ->
                 val isCompleted = activeSet.isCompleted
                 val prevSet = prevSets.getOrNull(setIndex)
@@ -303,16 +302,14 @@ fun ExerciseCard(
                     if (displayW % 1 == 0.0) displayW.toInt().toString() else "%.1f".format(displayW)
                 } ?: ""
                 val repsPlaceholder = prevSet?.reps?.toString() ?: ""
-                
-                // Set Type Color
+
                 val typeColor = when(activeSet.setType) {
                     "W" -> WarningOrange
                     "D" -> SuccessGreen
                     "F" -> MaterialTheme.colorScheme.primary
                     else -> if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                 }
-                
-                // Hairline Divider
+
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 
                 val hasData = activeSet.weight.isNotEmpty() || activeSet.reps.isNotEmpty()
@@ -337,7 +334,7 @@ fun ExerciseCard(
                         color = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Type Toggle (N, W, D, F)
+                    // Type Toggle
                     Box(
                         modifier = Modifier
                             .width(44.dp)
@@ -393,7 +390,7 @@ fun ExerciseCard(
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    // Status Check (Custom Red Circle)
+                    // Status check
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -423,7 +420,7 @@ fun ExerciseCard(
                 }
             }
 
-            // Buton de adăugat set nou (Minimalist)
+            // Buton de adaugat set nou
             TextButton(
                 onClick = { viewModel.addSetToExercise(exerciseIndex) },
                 modifier = Modifier.align(Alignment.Start).padding(top = 8.dp)

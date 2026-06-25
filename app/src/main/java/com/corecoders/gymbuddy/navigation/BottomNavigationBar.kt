@@ -56,8 +56,8 @@ fun BottomNavigationBar(navController: NavController) {
                 },
                 alwaysShowLabel = false,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary, // Roșu Lift Card când e selectat
-                    unselectedIconColor = MaterialTheme.colorScheme.secondary, // Gri când nu e selectat
+                    selectedIconColor = MaterialTheme.colorScheme.primary, // rosu cand e selectat
+                    unselectedIconColor = MaterialTheme.colorScheme.secondary, // gri cand nu e selectat
                     indicatorColor = Color.Transparent
                 )
             )

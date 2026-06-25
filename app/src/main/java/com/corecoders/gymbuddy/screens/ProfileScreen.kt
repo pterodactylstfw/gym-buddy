@@ -109,7 +109,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- HEADER PROFIL ---
+            // header
             val experienceStr = experience.takeIf { it.isNotEmpty() } ?: "Athlete"
             val ageStr = if (age > 0) "$age yrs" else ""
             val weightStr = if (weight > 0f) {
@@ -131,7 +131,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- TAB-URI ---
+            // taburi
             TabRow(
                 selectedTabIndex = selectedTabIndex,
                 containerColor = MaterialTheme.colorScheme.background,
@@ -161,7 +161,7 @@ fun ProfileScreen(
                 }
             }
 
-            // --- CONTINUT TAB-URI ---
+            // continut
             Box(modifier = Modifier.weight(1f)) {
                 when (selectedTabIndex) {
                     0 -> WorkoutsTabContent(workouts, navController)

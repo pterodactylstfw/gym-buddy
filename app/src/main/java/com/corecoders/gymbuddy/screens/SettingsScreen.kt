@@ -66,7 +66,7 @@ fun SettingsScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
 
-            // --- ACCOUNT ---
+            // account
             SettingsGroupHeader("ACCOUNT")
             SettingsCard {
                 SettingsNavRow(
@@ -79,7 +79,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- PREFERENCES ---
+            // preferences
             SettingsGroupHeader("PREFERENCES")
             SettingsCard {
                 val themeLabel = when (themeMode) {
@@ -105,7 +105,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- WORKOUT ---
+            // workout
             SettingsGroupHeader("WORKOUT")
             SettingsCard {
                 SettingsSwitchRow(
@@ -119,7 +119,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- SIGN OUT BUTTON ---
+            // sign out
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -142,7 +142,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- DELETE ACCOUNT BUTTON ---
+            // delete account
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)),

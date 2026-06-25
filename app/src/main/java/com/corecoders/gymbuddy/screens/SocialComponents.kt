@@ -63,7 +63,7 @@ fun CommentsBottomSheet(
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), thickness = 0.5.dp)
 
-            // Comments List
+            // Comments list
             Box(modifier = Modifier.weight(1f)) {
                 if (comments.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -135,7 +135,7 @@ fun CommentsBottomSheet(
                 }
             }
 
-            // Input Field
+            // Input field
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

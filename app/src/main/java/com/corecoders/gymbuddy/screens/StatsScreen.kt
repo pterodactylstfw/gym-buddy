@@ -63,7 +63,7 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
-            // --- HEADER ---
+            // header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -94,12 +94,12 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- TIME FILTER ---
+            // time filter
             TimeFilterSelector()
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- MAIN STATS GRID ---
+            // main stats
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StatCard(
                     title = "WORKOUTS LOGGED",
@@ -144,7 +144,7 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- BODY COMPOSITION ---
+            // body composition
             Text(
                 text = "BODY COMPOSITION",
                 color = MaterialTheme.colorScheme.secondary,
@@ -173,12 +173,12 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- MUSCLE FOCUS ---
+            // muscle focus
             MuscleFocusCard(muscleCounts, modifier = Modifier.fillMaxWidth())
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- VOLUME & CALORIES ---
+            // volume, calories
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 StatCard(
                     title = "VOLUME",
@@ -196,7 +196,7 @@ fun StatsScreen(navController: NavController, workoutViewModel: WorkoutViewModel
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- AREAS TO FOCUS ---
+            // areas to focus
             AreasToFocusCard(muscleCounts)
 
             Spacer(modifier = Modifier.height(80.dp))

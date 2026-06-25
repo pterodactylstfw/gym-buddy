@@ -167,7 +167,6 @@ class SocialViewModel : ViewModel() {
             val success = repository.addComment(postId, text)
             if (success) {
                 loadComments(postId)
-                // Also optimistically update local comments count in feed
                 _feedPosts.value = _feedPosts.value.map { post ->
                     if (post.postId == postId) {
                         post.copy(comments = post.comments + 1)
