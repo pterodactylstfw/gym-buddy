@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.corecoders.gymbuddy.viewmodel.SettingsViewModel
 import com.corecoders.gymbuddy.viewmodel.ProfileViewModel
+import com.corecoders.gymbuddy.viewmodel.ServerStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +116,70 @@ fun SettingsScreen(
                     checked = autoComplete,
                     onCheckedChange = { viewModel.toggleAutoCompleteSet(it) }
                 )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // health
+            SettingsGroupHeader("SYSTEM HEALTH")
+            SettingsCard {
+                val serverStatus by viewModel.serverStatus.collectAsState()
+                val serverError by viewModel.serverError.collectAsState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Dns,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Server Status",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 16.sp
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Status: ",
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontSize = 12.sp
+                            )
+                            val (statusText, statusColor) = when (serverStatus) {
+                                ServerStatus.CHECKING -> "Checking..." to MaterialTheme.colorScheme.secondary
+                                ServerStatus.OK -> "OK" to Color(0xFF2E7D32)
+                                ServerStatus.DOWN -> "DOWN" to Color(0xFFC62828)
+                            }
+                            Text(
+                                text = statusText,
+                                color = statusColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                        if (serverStatus == ServerStatus.DOWN && !serverError.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = serverError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    IconButton(onClick = { viewModel.checkServerStatus() }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = "Refresh",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
