@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.corecoders.gymbuddy.data.Exercise
+import com.corecoders.gymbuddy.data.dto.ExerciseDto
 import com.corecoders.gymbuddy.viewmodel.ExerciseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -127,64 +130,185 @@ fun ExerciseCatalogScreen(
 
         // Floating exercise detail catalog
         selectedExerciseToShow?.let { exercise ->
+            var exerciseDetail by remember(exercise.id) { mutableStateOf<ExerciseDto?>(null) }
+            var isLoadingDetail by remember(exercise.id) { mutableStateOf(false) }
+            var loadingError by remember(exercise.id) { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(exercise.id) {
+                isLoadingDetail = true
+                loadingError = null
+                try {
+                    val response = com.corecoders.gymbuddy.services.ApiClient.exerciseApi.getExerciseById(exercise.id)
+                    if (response.success) {
+                        exerciseDetail = response.data
+                    } else {
+                        loadingError = "Could not load details"
+                    }
+                } catch (e: Exception) {
+                    loadingError = e.localizedMessage ?: "Network error"
+                } finally {
+                    isLoadingDetail = false
+                }
+            }
+
             Dialog(onDismissRequest = { selectedExerciseToShow = null }) {
                 Card(
                     shape = RoundedCornerShape(28.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .fillMaxHeight(0.85f)
                         .padding(16.dp),
                     border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
                     ) {
-                        Text(
-                            text = exercise.name.uppercase(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        val displayCategory = if (exercise.targetMuscle != "Unknown") {
-                            if (exercise.bodyPart != "Unknown" && exercise.bodyPart != exercise.targetMuscle) {
-                                "${exercise.bodyPart} • ${exercise.targetMuscle}"
+                        // Scrollable content area
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = exercise.name.uppercase(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            val displayCategory = if (exercise.targetMuscle != "Unknown") {
+                                if (exercise.bodyPart != "Unknown" && exercise.bodyPart != exercise.targetMuscle) {
+                                    "${exercise.bodyPart} • ${exercise.targetMuscle}"
+                                } else {
+                                    exercise.targetMuscle
+                                }
+                            } else if (exercise.bodyPart != "Unknown") {
+                                exercise.bodyPart
                             } else {
-                                exercise.targetMuscle
+                                "Full Body"
                             }
-                        } else if (exercise.bodyPart != "Unknown") {
-                            exercise.bodyPart
-                        } else {
-                            "Full Body"
+
+                            Text(
+                                text = displayCategory,
+                                color = MaterialTheme.colorScheme.secondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Imaginea mare a exercitiului (GIF)
+                            AsyncImage(
+                                model = exercise.gifUrl,
+                                contentDescription = exercise.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.background),
+                                contentScale = ContentScale.Fit
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            if (isLoadingDetail) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            } else if (loadingError != null) {
+                                Text(
+                                    text = "Error loading details: $loadingError",
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            } else if (exerciseDetail != null) {
+                                val detail = exerciseDetail!!
+                                
+                                // Badges for Equipment and Exercise Type
+                                val equipmentText = detail.equipments?.joinToString(", ") ?: "None"
+                                val typeText = detail.exerciseType ?: "Unknown"
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                                ) {
+                                    SuggestionChip(
+                                        onClick = {},
+                                        label = { Text("EQ: ${equipmentText.uppercase()}") },
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            labelColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                    SuggestionChip(
+                                        onClick = {},
+                                        label = { Text("TYPE: ${typeText.uppercase()}") },
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            labelColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
+
+                                if (!detail.overview.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = detail.overview,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Justify,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                    )
+                                }
+
+                                detail.instructions?.let { instructions ->
+                                    if (instructions.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            text = "INSTRUCTIONS",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.align(Alignment.Start)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        instructions.forEachIndexed { index, step ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.Start
+                                            ) {
+                                                Text(
+                                                    text = "${index + 1}. ",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    text = step,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
-                        Text(
-                            text = displayCategory,
-                            color = MaterialTheme.colorScheme.secondary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Imaginea mare a exercitiului (GIF)
-                        AsyncImage(
-                            model = exercise.gifUrl,
-                            contentDescription = exercise.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.background),
-                            contentScale = ContentScale.Fit
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
+                        // Bottom Actions area
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center
@@ -192,7 +316,7 @@ fun ExerciseCatalogScreen(
                             Button(
                                 onClick = { selectedExerciseToShow = null },
                                 shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth(0.6f),
+                                modifier = Modifier.fillMaxWidth(0.8f),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
                                 Text("CLOSE", fontWeight = FontWeight.Black)
